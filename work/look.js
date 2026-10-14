@@ -1,0 +1,23 @@
+const { app, BrowserWindow } = require('electron');
+const path = require('path'); const fs = require('fs');
+app.disableHardwareAcceleration(); app.commandLine.appendSwitch('disable-gpu');
+const wait = (ms) => new Promise((r) => setTimeout(r, ms));
+const OUT = path.join(__dirname, 'look'); fs.mkdirSync(OUT, { recursive: true });
+app.whenReady().then(async () => {
+  const win = new BrowserWindow({ width: 1520, height: 780, show: false });
+  win.webContents.setBackgroundThrottling(false); win.showInactive();
+  const errs = [];
+  win.webContents.on('console-message', (e, l, m) => { if (l >= 2 && !/Insecure Content-Security-Policy/.test(m)) errs.push(m); });
+  await win.loadFile(path.join(__dirname, '..', 'renderer', 'notebook', 'index.html'));
+  await wait(1800); await new Promise(r=>setTimeout(r,600));
+  const q = (js) => win.webContents.executeJavaScript(js);
+  const shot = async (n) => { const img = await win.webContents.capturePage(); fs.writeFileSync(path.join(OUT, n + '.png'), img.toPNG()); };
+  const idle = async () => { let last = null, s = 0; for (let i = 0; i < 80; i++) { const v = await q(`(() => { const mv = [...document.querySelectorAll('.nb-page')].some((el) => { const t = el.style.transform || ''; return !!t && t !== 'translate3d(0px, 0px, 0px)'; }); return JSON.stringify({ p: window.__nb.currentPage(), mv }); })()`);
+    if (v === last) { s++; if (s >= 3 && !JSON.parse(v).mv) return; } else { s = 0; last = v; } await wait(140); } };
+  await idle(); await shot('1-cover');
+  await q(`window.__nb.gotoPage(4); true`); await idle(); await shot('2-spread'); console.log('shot2 page=' + (await q('window.__nb.currentPage()')));;
+  await q(`window.__nb.gotoPage(6); true`); await idle(); await shot('3-spread2'); console.log('shot3 page=' + (await q('window.__nb.currentPage()')));;
+  await q(`window.__nb.gotoPage(3); true`); await idle(); await shot('4-toc'); console.log('shot4 page=' + (await q('window.__nb.currentPage()')));;
+  console.log('errors:', errs.length ? JSON.stringify(errs.slice(0, 4)) : 'none');
+  app.quit();
+});

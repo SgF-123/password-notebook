@@ -1,0 +1,288 @@
+/* ==========================================================================
+   程序外壳：无边框窗口的自绘标题栏 + 解锁 → 翻开本子的过渡
+   （本子自己的版式在 notebook/notebook.css 里，这里只负责"装进窗口"）
+   ========================================================================== */
+
+:root {
+  --titlebar-h: 44px;
+  --shadow-sm: 0 1px 2px rgba(0, 0, 0, 0.06);
+}
+
+/* ---------- 标题栏（可拖拽） ---------- */
+.titlebar {
+  height: var(--titlebar-h);
+  flex: 0 0 auto;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding-left: 0;
+  background: linear-gradient(90deg, #2f2f2f 0 68px, #f6f7f8 68px);
+  border-bottom: 1px solid #e2e3e5;
+  -webkit-app-region: drag;
+}
+
+.titlebar .tb-brand {
+  width: 68px;
+  flex: 0 0 auto;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.logo-mark-xs {
+  width: 26px;
+  height: 26px;
+  border-radius: 7px;
+  font-size: 14px;
+  box-shadow: none;
+}
+
+.titlebar .tb-appname {
+  font-size: 13.5px;
+  font-weight: 600;
+  color: var(--text);
+  letter-spacing: 0.3px;
+}
+
+.titlebar .tb-hint { font-size: 12px; color: var(--text-3); }
+.titlebar .tb-spacer { flex: 1; }
+
+/* 标题栏上的三个工具按钮（生成器 / 设置 / 合上本子） */
+.tb-tools {
+  display: flex;
+  align-items: center;
+  gap: 2px;
+  -webkit-app-region: no-drag;
+}
+
+.tb-btn {
+  width: 32px;
+  height: 30px;
+  border: none;
+  border-radius: 8px;
+  background: transparent;
+  color: #5a616b;
+  cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  transition: background 0.15s, color 0.15s;
+}
+
+.tb-btn svg { width: 17px; height: 17px; }
+.tb-btn:hover { background: #e6e7e9; color: var(--text); }
+
+.win-actions {
+  display: flex;
+  align-items: stretch;
+  align-self: stretch;
+  margin-left: 6px;
+  -webkit-app-region: no-drag;
+}
+
+.win-btn {
+  width: 46px;
+  height: 100%;
+  border: none;
+  background: transparent;
+  color: #5a616b;
+  cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  transition: background 0.15s, color 0.15s;
+}
+
+.win-btn svg { width: 15px; height: 15px; }
+.win-btn:hover { background: #e6e7e9; color: var(--text); }
+.win-btn.win-close:hover { background: #e64340; color: #fff; }
+
+/* 解锁屏上的窗口按钮（右上角悬浮）与顶部拖拽条 */
+.lock-winbar {
+  position: fixed;
+  top: 0;
+  right: 0;
+  height: 40px;
+  display: flex;
+  z-index: 40;
+  -webkit-app-region: no-drag;
+}
+
+.lock-winbar .win-btn { width: 44px; height: 40px; }
+.lock-winbar .win-btn:hover { background: #e6e7e9; color: var(--text); }
+.lock-winbar .win-btn.win-close:hover { background: #e64340; color: #fff; }
+
+.lock-drag {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  height: 40px;
+  z-index: 30;
+  -webkit-app-region: drag;
+}
+
+/* ---------- 主体：解锁后只有一本本子 ---------- */
+.app-body {
+  flex: 1;
+  display: flex;
+  min-height: 0;
+}
+
+.view { flex: 1; min-height: 0; }
+
+#screen-book.view-book {
+  position: relative;
+  z-index: 0;                    /* 自成一层，编辑面板 / 弹窗永远压在书上 */
+  overflow: hidden;
+  background: #16171b;           /* 桌子外的底色，跟本子皮肤一致 */
+}
+
+/* notebook.css 里的 .desk / .stage / .hud / .toast 都是 position:fixed（整页铺满），
+   嵌进主窗口之后收进 #screen-book，别盖住标题栏 */
+#screen-book .desk { position: absolute; }
+#screen-book .stage { position: absolute; }
+#screen-book .hud { position: absolute; }
+#screen-book .toast { position: absolute; }
+
+/* 本子上那颗「＋ 写一条」：比同排的翻页按钮显眼一点 */
+#btnWriteNew {
+  background: linear-gradient(180deg, rgba(7, 193, 96, 0.5), rgba(6, 173, 86, 0.42));
+  border-color: rgba(160, 240, 196, 0.55);
+  color: #f0fff7;
+  font-weight: 600;
+}
+
+#btnWriteNew:hover {
+  background: linear-gradient(180deg, rgba(7, 193, 96, 0.72), rgba(6, 173, 86, 0.6));
+  border-color: rgba(190, 250, 215, 0.7);
+  color: #ffffff;
+}
+
+/* ---------- 解锁 → 翻开本子 的过渡 ---------- */
+/* 解锁屏脱出常规流、固定成浮层淡出，底下的书桌淡进来，本子轻轻"落"到桌面上 */
+.screen-lock.lock-leaving {
+  position: fixed;
+  inset: 0;
+  z-index: 50;
+  pointer-events: none;
+  animation: lockOut 0.42s ease forwards;
+}
+
+@keyframes lockOut {
+  from { opacity: 1; transform: scale(1); filter: blur(0); }
+  to { opacity: 0; transform: scale(1.035); filter: blur(3px); }
+}
+
+.screen-lock.lock-entering { animation: lockIn 0.34s ease both; }
+
+@keyframes lockIn {
+  from { opacity: 0; transform: scale(1.02); }
+  to { opacity: 1; transform: none; }
+}
+
+#screen-app.app-entering .titlebar { animation: barIn 0.36s ease both; }
+
+@keyframes barIn {
+  from { opacity: 0; transform: translateY(-10px); }
+  to { opacity: 1; transform: none; }
+}
+
+#screen-app.app-entering .desk { animation: deskIn 0.6s ease both; }
+
+@keyframes deskIn {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+
+/* 本子本身：从稍小、稍低的地方推上来，像刚被放到桌上 */
+#screen-app.app-entering .stage {
+  animation: bookSettle 0.78s cubic-bezier(0.2, 0.78, 0.24, 1) both;
+}
+
+@keyframes bookSettle {
+  from { opacity: 0; transform: scale(0.93) translateY(26px); }
+  to { opacity: 1; transform: none; }
+}
+
+#screen-app.app-entering .hud {
+  animation: hudUp 0.5s cubic-bezier(0.2, 0.78, 0.24, 1) 0.12s both;
+}
+
+@keyframes hudUp {
+  from { opacity: 0; transform: translateY(70px); }
+  to { opacity: 1; transform: none; }
+}
+
+/* 不想看动画的人（系统设置里关掉动画）就别动 */
+@media (prefers-reduced-motion: reduce) {
+  .screen-lock.lock-leaving,
+  .screen-lock.lock-entering,
+  #screen-app.app-entering .titlebar,
+  #screen-app.app-entering .desk,
+  #screen-app.app-entering .stage,
+  #screen-app.app-entering .hud { animation: none !important; }
+}
+
+/* ---------- 共用小件 ---------- */
+.icon-btn {
+  width: 34px;
+  height: 34px;
+  border: none;
+  border-radius: 8px;
+  background: transparent;
+  color: var(--text-2);
+  cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  transition: background 0.15s, color 0.15s;
+  font-size: 16px;
+}
+
+.icon-btn:hover { background: #f0f1f3; color: var(--text); }
+.icon-btn svg { width: 19px; height: 19px; }
+.brand-name { font-weight: 600; }
+
+/* 编辑面板里的方形头像 */
+.avatar-sq {
+  width: 54px;
+  height: 54px;
+  border-radius: 13px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: #fff;
+  font-size: 22px;
+  font-weight: 600;
+  flex-shrink: 0;
+}
+
+/* ---------- 把程序自己的底子拉回来 ---------- */
+/* notebook.css / variants.css 给 html,body 定了通体深色（那是给整页本子用的），
+   这份 css 最后加载，所以盖得住 */
+html, body {
+  height: 100%;
+  margin: 0;
+  padding: 0;
+  overflow: hidden;
+  background: var(--bg);
+  color: var(--text);
+  font-family: "Segoe UI", "Microsoft YaHei", "PingFang SC", system-ui, -apple-system, sans-serif;
+  -webkit-font-smoothing: auto;
+}
+
+html:not([data-variant]) body,
+html[data-variant] body { background: var(--bg); }
+/* ==========================================================================
+   macOS 适配：窗口按钮交给系统（红黄绿灯在左上角），我们只留可拖拽的标题栏
+   （这个 .is-mac 是 app.js 在 darwin 上给 <html> 加的）
+   ========================================================================== */
+.is-mac .win-actions { display: none; }        /* 自绘的最小化 / 最大化 / 关闭 */
+.is-mac .lock-winbar { display: none; }        /* 解锁屏右上角那组按钮 */
+
+/* 给左上角的红黄绿灯让位 */
+.is-mac .titlebar { padding-left: 78px; }
+.is-mac .lock-drag { left: 88px; }             /* 拖拽条别盖住红黄绿灯，不然点不到 */
+.is-mac .lock-visual { padding-top: 46px; }
+.is-mac .lock-form-side { padding-top: 46px; }

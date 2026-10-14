@@ -1,0 +1,37 @@
+name: 打包 macOS 版
+
+# 用法：推到 GitHub 后，在 Actions 里点这个 workflow → Run workflow，
+# 跑完在 Artifacts 里直接下载 dmg（macOS runner 是 GitHub 免费的，不用自己有 Mac）。
+on:
+  workflow_dispatch:
+  push:
+    tags:
+      - 'v*'
+
+jobs:
+  mac:
+    runs-on: macos-14
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+
+      - name: 装依赖
+        run: npm ci
+
+      - name: 打包（arm64 + x64 的 dmg / zip）
+        run: npm run build:mac
+        env:
+          # 没有 Apple 开发者证书时跳过签名，照样能出包（用户首次打开要右键 → 打开）
+          CSC_IDENTITY_AUTO_DISCOVERY: 'false'
+
+      - name: 上传产物
+        uses: actions/upload-artifact@v4
+        with:
+          name: 密码本-macOS
+          path: |
+            dist/*.dmg
+            dist/*.zip
+          if-no-files-found: error

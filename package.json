@@ -1,0 +1,70 @@
+{
+  "name": "password-notebook",
+  "productName": "密码本",
+  "version": "1.0.0",
+  "description": "本地加密的手写密码本：输主密码翻开一本能写能翻的本子",
+  "main": "main.js",
+  "author": "FRee",
+  "license": "MIT",
+  "scripts": {
+    "start": "electron .",
+    "notebook": "electron notebook-preview.js",
+    "build": "electron-builder --win nsis",
+    "build:mac": "electron-builder --mac dmg zip",
+    "build:mac:arm64": "electron-builder --mac dmg --arm64",
+    "build:mac:x64": "electron-builder --mac dmg --x64"
+  },
+  "devDependencies": {
+    "electron": "^33.0.0",
+    "electron-builder": "^25.1.8"
+  },
+  "build": {
+    "appId": "com.free.passwordnotebook",
+    "productName": "密码本",
+    "directories": {
+      "output": "dist"
+    },
+    "files": [
+      "main.js",
+      "vault-core.js",
+      "preload.js",
+      "renderer/**/*",
+      "package.json"
+    ],
+    "win": {
+      "target": "nsis",
+      "icon": "build/icon.ico"
+    },
+    "mac": {
+      "target": [
+        {
+          "target": "dmg",
+          "arch": ["arm64", "x64"]
+        },
+        {
+          "target": "zip",
+          "arch": ["arm64", "x64"]
+        }
+      ],
+      "icon": "build/icon.png",
+      "category": "public.app-category.productivity",
+      "darkModeSupport": false,
+      "extendInfo": {
+        "LSMinimumSystemVersion": "10.15"
+      }
+    },
+    "dmg": {
+      "title": "密码本",
+      "contents": [
+        { "x": 130, "y": 220, "type": "file" },
+        { "x": 410, "y": 220, "type": "link", "path": "/Applications" }
+      ]
+    },
+    "nsis": {
+      "oneClick": false,
+      "allowToChangeInstallationDirectory": true,
+      "createDesktopShortcut": true,
+      "shortcutName": "密码本"
+    }
+  }
+}

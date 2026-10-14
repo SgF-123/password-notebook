@@ -1,0 +1,168 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8" />
+  <meta http-equiv="Content-Security-Policy" content="default-src 'self'; style-src 'self' 'unsafe-inline'; script-src 'self'; img-src 'self' data:;" />
+  <title>密匣 VaultChat</title>
+  <link rel="stylesheet" href="styles.css" />
+</head>
+<body>
+  <!-- ======= 解锁 / 创建界面 ======= -->
+  <div id="screen-lock" class="screen screen-lock hidden">
+    <div class="lock-split">
+      <!-- 左侧：动画小人 -->
+      <section class="lock-left">
+        <div class="lock-brand">
+          <div class="logo-mark logo-mark-sm">密</div>
+          <span class="brand-name">密匣 VaultChat</span>
+        </div>
+        <div class="chars-stage" id="chars-stage"></div>
+        <p class="lock-left-foot">本地加密 · 数据不出设备</p>
+      </section>
+
+      <!-- 右侧：解锁表单 -->
+      <section class="lock-right">
+        <form class="lock-panel" id="lock-form" autocomplete="off">
+          <div class="lock-logo-mobile">
+            <div class="logo-mark">密</div>
+          </div>
+          <h1 class="lock-title" id="lock-title">欢迎回来</h1>
+          <p class="lock-subtitle" id="lock-subtitle">你的本地加密密码管家</p>
+
+          <label class="lock-label" for="lock-password">主密码</label>
+          <div class="lock-field-wrap">
+            <input id="lock-password" type="password" class="field" placeholder="请输入主密码" autocomplete="off" />
+            <button type="button" id="lock-eye" class="eye-btn" tabindex="-1" title="显示 / 隐藏密码">
+              <svg class="eye-open" viewBox="0 0 24 24"><path fill="currentColor" d="M12 5c-5 0-9 4.5-10 7 1 2.5 5 7 10 7s9-4.5 10-7c-1-2.5-5-7-10-7zm0 12a5 5 0 1 1 0-10 5 5 0 0 1 0 10zm0-8a3 3 0 1 0 0 6 3 3 0 0 0 0-6z"/></svg>
+              <svg class="eye-off" viewBox="0 0 24 24"><path fill="currentColor" d="M12 7a5 5 0 0 1 5 5c0 .65-.13 1.26-.36 1.83l2.92 2.92A11.8 11.8 0 0 0 22 12c-1-2.5-5-7-10-7-1.28 0-2.5.29-3.6.79l2.16 2.16C11 7.6 11.48 7 12 7zM2.7 3.7 1.3 5.1l2.5 2.5A11.8 11.8 0 0 0 2 12c1 2.5 5 7 10 7 1.9 0 3.66-.53 5.2-1.4l2.7 2.7 1.4-1.4L2.7 3.7zM12 17a5 5 0 0 1-4.66-3.15l1.55 1.55c.34.06.7.1 1.11.1a3 3 0 0 0 3-3c0-.4-.04-.77-.1-1.11L12.9 10.4A5 5 0 0 1 12 17z"/></svg>
+            </button>
+          </div>
+
+          <input id="lock-confirm" type="password" class="field hidden" placeholder="再次输入主密码" autocomplete="off" />
+
+          <button id="lock-submit" class="btn btn-primary btn-block lock-submit">解锁</button>
+          <p class="lock-error" id="lock-error"></p>
+          <p class="lock-tip" id="lock-tip">数据仅加密存储在本地，不会上传到任何服务器。</p>
+        </form>
+      </section>
+    </div>
+  </div>
+
+  <!-- ======= 主界面 ======= -->
+  <div id="screen-main" class="screen hidden">
+    <!-- 顶部工具栏 -->
+    <header class="toolbar">
+      <div class="toolbar-brand">
+        <div class="logo-mark logo-mark-sm">密</div>
+        <span class="brand-name">密匣</span>
+      </div>
+      <div class="toolbar-search">
+        <svg viewBox="0 0 24 24" class="search-icon"><path fill="currentColor" d="M15.5 14h-.79l-.28-.27a6.5 6.5 0 1 0-.7.7l.27.28v.79l5 4.99L20.49 19l-4.99-5zm-6 0A4.5 4.5 0 1 1 14 9.5 4.5 4.5 0 0 1 9.5 14z"/></svg>
+        <input id="search-input" type="text" placeholder="搜索标题、用户名、网址…" />
+      </div>
+      <div class="toolbar-actions">
+        <button id="btn-new" class="btn btn-primary btn-sm">＋ 新建</button>
+        <button id="btn-settings" class="icon-btn" title="设置">
+          <svg viewBox="0 0 24 24"><path fill="currentColor" d="M19.14 12.94a7.5 7.5 0 0 0 .05-.94 7.5 7.5 0 0 0-.05-.94l2.03-1.58a.5.5 0 0 0 .12-.64l-1.92-3.32a.5.5 0 0 0-.61-.22l-2.39.96a7.5 7.5 0 0 0-1.62-.94l-.36-2.54a.5.5 0 0 0-.5-.42h-3.84a.5.5 0 0 0-.5.42l-.36 2.54c-.59.24-1.13.56-1.62.94l-2.39-.96a.5.5 0 0 0-.61.22L2.35 8.84a.5.5 0 0 0 .12.64l2.03 1.58a7.5 7.5 0 0 0 0 1.88L2.47 14.52a.5.5 0 0 0-.12.64l1.92 3.32c.13.22.4.3.61.22l2.39-.96c.49.38 1.03.7 1.62.94l.36 2.54c.04.24.24.42.5.42h3.84c.26 0 .46-.18.5-.42l.36-2.54c.59-.24 1.13-.56 1.62-.94l2.39.96c.21.08.48 0 .61-.22l1.92-3.32a.5.5 0 0 0-.12-.64l-2.03-1.58zM12 15.5A3.5 3.5 0 1 1 15.5 12 3.5 3.5 0 0 1 12 15.5z"/></svg>
+        </button>
+        <button id="btn-lock" class="icon-btn" title="锁定">
+          <svg viewBox="0 0 24 24"><path fill="currentColor" d="M18 8h-1V6a5 5 0 0 0-10 0v2H6a2 2 0 0 0-2 2v10a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V10a2 2 0 0 0-2-2zm-6 9a2 2 0 1 1 0-4 2 2 0 0 1 0 4zM9 8V6a3 3 0 0 1 6 0v2H9z"/></svg>
+        </button>
+      </div>
+    </header>
+
+    <!-- 分类标签 -->
+    <nav class="category-tabs" id="category-tabs"></nav>
+
+    <!-- 卡片网格 -->
+    <main class="grid-wrap">
+      <div class="empty-state hidden" id="empty-state">
+        <div class="empty-icon">🗝️</div>
+        <p class="empty-title" id="empty-title">还没有密码条目</p>
+        <p class="empty-desc" id="empty-desc">点击右上角「新建」开始添加</p>
+        <button id="btn-empty-new" class="btn btn-primary btn-sm">＋ 新建第一条</button>
+      </div>
+      <div class="grid" id="grid"></div>
+    </main>
+  </div>
+
+  <!-- ======= 详情抽屉 ======= -->
+  <div id="drawer-backdrop" class="drawer-backdrop hidden"></div>
+  <aside id="drawer" class="drawer hidden">
+    <div class="drawer-header">
+      <div class="drawer-title" id="drawer-title">详情</div>
+      <button id="drawer-close" class="icon-btn" title="关闭">✕</button>
+    </div>
+    <div class="drawer-body" id="drawer-body"></div>
+    <div class="drawer-footer" id="drawer-footer">
+      <button id="btn-save" class="btn btn-primary hidden">保存</button>
+      <button id="btn-delete" class="btn btn-danger hidden">删除</button>
+    </div>
+  </aside>
+
+  <!-- ======= 设置弹窗 ======= -->
+  <div id="modal-backdrop" class="drawer-backdrop hidden"></div>
+  <div id="settings-modal" class="modal hidden">
+    <div class="modal-header">
+      <div class="drawer-title">设置</div>
+      <button id="settings-close" class="icon-btn">✕</button>
+    </div>
+    <div class="modal-body">
+      <div class="setting-row">
+        <div class="setting-label">自动锁定</div>
+        <div class="setting-control">
+          <select id="setting-autolock" class="field">
+            <option value="1">1 分钟</option>
+            <option value="5">5 分钟</option>
+            <option value="15">15 分钟</option>
+            <option value="30">30 分钟</option>
+            <option value="0">从不</option>
+          </select>
+        </div>
+      </div>
+      <div class="setting-row">
+        <div class="setting-label">默认显示密码</div>
+        <label class="switch">
+          <input type="checkbox" id="setting-showpwd" />
+          <span class="slider"></span>
+        </label>
+      </div>
+      <div class="setting-row setting-row-column">
+        <div class="setting-label">修改主密码</div>
+        <input id="set-oldpw" type="password" class="field" placeholder="当前主密码" autocomplete="off" />
+        <input id="set-newpw" type="password" class="field" placeholder="新主密码" autocomplete="off" />
+        <input id="set-newpw2" type="password" class="field" placeholder="再次输入新主密码" autocomplete="off" />
+        <button id="btn-change-master" class="btn btn-primary btn-sm">修改主密码</button>
+      </div>
+    </div>
+    <div class="modal-error" id="settings-error"></div>
+  </div>
+
+  <!-- ======= 密码生成器弹窗 ======= -->
+  <div id="gen-backdrop" class="drawer-backdrop hidden"></div>
+  <div id="gen-modal" class="modal hidden">
+    <div class="modal-header">
+      <div class="drawer-title">密码生成器</div>
+      <button id="gen-close" class="icon-btn">✕</button>
+    </div>
+    <div class="modal-body">
+      <div class="gen-result-row">
+        <input id="gen-password" type="text" class="field gen-field" readonly />
+        <button id="gen-copy" class="btn btn-secondary btn-sm">复制</button>
+        <button id="gen-refresh" class="btn btn-secondary btn-sm">↻</button>
+      </div>
+      <div class="gen-options">
+        <label>长度 <input id="gen-length" type="range" min="8" max="64" value="20" /> <span id="gen-length-val">20</span></label>
+        <label class="gen-check"><input type="checkbox" id="gen-upper" checked /> 大写</label>
+        <label class="gen-check"><input type="checkbox" id="gen-lower" checked /> 小写</label>
+        <label class="gen-check"><input type="checkbox" id="gen-digit" checked /> 数字</label>
+        <label class="gen-check"><input type="checkbox" id="gen-symbol" checked /> 符号</label>
+      </div>
+      <button id="gen-use" class="btn btn-primary btn-block">使用此密码</button>
+    </div>
+  </div>
+
+  <script src="characters.js"></script>
+  <script src="app.js"></script>
+</body>
+</html>

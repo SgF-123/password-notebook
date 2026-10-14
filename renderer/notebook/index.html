@@ -1,0 +1,47 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8" />
+  <meta http-equiv="Content-Security-Policy"
+        content="default-src 'self'; style-src 'self' 'unsafe-inline'; script-src 'self'; img-src 'self' data:;" />
+  <title>密码本 · 手写本子</title>
+  <link rel="stylesheet" href="notebook.css" />
+  <link rel="stylesheet" href="variants.css" />
+</head>
+<body>
+  <div class="desk" id="desk"></div>
+
+  <!-- 书桌台面 + 书本 -->
+  <div class="stage" id="stage">
+    <div class="mat" id="mat"></div>
+    <div class="pen" id="pen"></div>
+    <div class="book-wrap" id="bookWrap">
+      <div class="book-shadow"></div>
+      <!-- 翻页引擎（turn.js）的容器：页面由 notebook.js 在这里生成 -->
+      <div class="book" id="book"></div>
+      <div class="gutter" id="gutter"></div>
+      <div class="ribbon" id="ribbon" title="翻到目录"><span>目<br>录</span></div>
+    </div>
+  </div>
+
+  <!-- 底部控制条 -->
+  <div class="hud">
+    <div class="hud-left">
+      <button class="hbtn" id="btnPrev" title="上一页（←）">‹ 上一页</button>
+      <button class="hbtn" id="btnNext" title="下一页（→）">下一页 ›</button>
+    </div>
+    <div class="hud-mid" id="pageLabel">封面</div>
+    <div class="hud-right">
+      <button class="hbtn" id="btnToc" title="目录">目录</button>
+      <button class="hbtn" id="btnMask" title="遮住密码">遮住密码</button>
+      <button class="hbtn" id="btnSound" title="翻页音效">音效：关</button>
+    </div>
+  </div>
+
+  <div class="toast" id="toast"></div>
+
+  <script src="vendor/jquery.min.js"></script>
+  <script src="vendor/turn.js"></script>
+  <script src="notebook.js"></script>
+</body>
+</html>

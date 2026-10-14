@@ -1,0 +1,98 @@
+/* ==========================================================
+   背景板（桌面 + 桌垫）可选皮肤
+   通过 <html data-variant="A|B|C"> 切换；不设 = 原样。
+   默认 = A（暖橡木），B/C 需 <html data-variant="B|C"> 才生效。
+   ========================================================== */
+
+/* ---------- 默认 · 暖橡木桌面 + 米白皮质桌垫（A） ---------- */
+html:not([data-variant]) body, html[data-variant="A"] body { background: #b9a180; }
+html:not([data-variant]) .desk, html[data-variant="A"] .desk {
+  background:
+    radial-gradient(44% 42% at 27% 10%, rgba(255, 246, 224, .5), rgba(255, 246, 224, 0) 72%),
+    radial-gradient(120% 92% at 50% 120%, rgba(52, 33, 15, .5), rgba(52, 33, 15, 0) 64%),
+    linear-gradient(168deg, #cfb590 0%, #bb9f76 40%, #a78a60 72%, #8f7148 100%);
+}
+html:not([data-variant]) .desk::before, html[data-variant="A"] .desk::before {
+  opacity: .8;
+  background-image:
+    repeating-linear-gradient(4deg, rgba(120, 84, 44, .10) 0 2px, rgba(0, 0, 0, 0) 2px 13px),
+    repeating-linear-gradient(3.4deg, rgba(86, 58, 28, .10) 0 1px, rgba(0, 0, 0, 0) 1px 29px),
+    repeating-linear-gradient(5deg, rgba(255, 240, 210, .10) 0 3px, rgba(0, 0, 0, 0) 3px 47px);
+}
+html:not([data-variant]) .desk::after, html[data-variant="A"] .desk::after { opacity: .35; }
+html:not([data-variant]) .mat, html[data-variant="A"] .mat {
+  border-radius: 26px;
+  background:
+    radial-gradient(120% 130% at 26% 0%, rgba(255, 255, 255, .6), rgba(255, 255, 255, 0) 58%),
+    radial-gradient(80% 70% at 85% 100%, rgba(96, 72, 44, .34), rgba(0, 0, 0, 0) 70%),
+    linear-gradient(162deg, #f4ebd9 0%, #ead9c6 52%, #dfd0b9 100%);
+  box-shadow:
+    0 34px 64px rgba(40, 26, 10, .45),
+    0 0 0 1px rgba(255, 255, 255, .5) inset,
+    0 2px 0 rgba(255, 255, 255, .6) inset;
+}
+html:not([data-variant]) .mat::before, html[data-variant="A"] .mat::before { border-color: rgba(150, 118, 78, .4); }
+html:not([data-variant]) .mat::after, html[data-variant="A"] .mat::after { color: rgba(120, 92, 58, .5); }
+html:not([data-variant]) .pen, html[data-variant="A"] .pen {
+  background: linear-gradient(180deg, #3a2f22 0%, #241c13 46%, #140f09 100%);
+  box-shadow: 0 9px 14px rgba(40, 26, 10, .45);
+}
+
+/* ---------- B · 极简水泥灰 + 磨砂石板垫 ---------- */
+html[data-variant="B"] body { background: #3c3f45; }
+html[data-variant="B"] .desk {
+  background:
+    radial-gradient(48% 44% at 26% 8%, rgba(255, 255, 255, .13), rgba(255, 255, 255, 0) 72%),
+    radial-gradient(120% 92% at 50% 120%, rgba(0, 0, 0, .42), rgba(0, 0, 0, 0) 64%),
+    linear-gradient(165deg, #5c6068 0%, #4c5057 42%, #3f424a 72%, #33363c 100%);
+}
+html[data-variant="B"] .desk::before {
+  opacity: .35;
+  background-image: repeating-linear-gradient(0deg, rgba(255, 255, 255, .02) 0 2px, rgba(0, 0, 0, 0) 2px 9px);
+}
+html[data-variant="B"] .desk::after { opacity: .42; }
+html[data-variant="B"] .mat {
+  background:
+    radial-gradient(110% 130% at 30% 0%, rgba(255, 255, 255, .1), rgba(255, 255, 255, 0) 60%),
+    radial-gradient(80% 70% at 85% 100%, rgba(0, 0, 0, .3), rgba(0, 0, 0, 0) 72%),
+    linear-gradient(160deg, #8b8f96 0%, #80848b 50%, #747880 100%);
+  box-shadow:
+    0 34px 64px rgba(0, 0, 0, .5),
+    0 0 0 1px rgba(255, 255, 255, .14) inset,
+    0 2px 0 rgba(255, 255, 255, .1) inset;
+}
+html[data-variant="B"] .mat::before { border-color: rgba(255, 255, 255, .14); }
+html[data-variant="B"] .mat::after { color: rgba(255, 255, 255, .22); }
+
+/* ---------- C · 石墨深灰 + 暖灰皮革垫 ---------- */
+html[data-variant="C"] body { background: #12161b; }
+html[data-variant="C"] .desk {
+  background:
+    radial-gradient(50% 46% at 25% 7%, rgba(255, 236, 206, .16), rgba(255, 236, 206, 0) 72%),
+    radial-gradient(130% 96% at 50% 122%, rgba(0, 0, 0, .55), rgba(0, 0, 0, 0) 64%),
+    linear-gradient(166deg, #2a2d33 0%, #22252b 46%, #1a1d22 74%, #131519 100%);
+}
+html[data-variant="C"] .desk::before {
+  opacity: .4;
+  background-image:
+    repeating-linear-gradient(0deg, rgba(255, 255, 255, .02) 0 2px, rgba(0, 0, 0, 0) 2px 8px),
+    radial-gradient(2px 2px at 20% 30%, rgba(255, 255, 255, .05), rgba(0, 0, 0, 0) 100%);
+}
+html[data-variant="C"] .desk::after { opacity: .42; }
+html[data-variant="C"] .mat {
+  background:
+    radial-gradient(120% 130% at 26% 0%, rgba(255, 246, 230, .14), rgba(255, 246, 230, 0) 58%),
+    radial-gradient(80% 70% at 85% 100%, rgba(0, 0, 0, .36), rgba(0, 0, 0, 0) 70%),
+    linear-gradient(160deg, #3a3d44 0%, #31343b 52%, #282b31 100%);
+  box-shadow:
+    0 34px 64px rgba(0, 0, 0, .58),
+    0 0 0 1px rgba(255, 255, 255, .09) inset,
+    0 2px 0 rgba(255, 255, 255, .05) inset;
+}
+html[data-variant="C"] .mat::before { border-color: rgba(210, 190, 150, .2); }
+html[data-variant="C"] .mat::after { color: rgba(230, 214, 180, .24); }
+
+/* 底栏在浅色方案（默认/A）下也要看得清 */
+html:not([data-variant]) .hud, html[data-variant="A"] .hud {
+  background: linear-gradient(180deg, rgba(30, 22, 12, 0) 0%, rgba(30, 22, 12, .55) 40%, rgba(30, 22, 12, .94) 100%);
+}

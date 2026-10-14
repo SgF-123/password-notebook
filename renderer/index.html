@@ -1,0 +1,250 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8" />
+  <meta http-equiv="Content-Security-Policy" content="default-src 'self'; style-src 'self' 'unsafe-inline'; script-src 'self'; img-src 'self' data:;" />
+  <title>密码本</title>
+  <link rel="stylesheet" href="styles.css" />
+  <!-- 手写密码本（turn.js 翻页）样式：嵌在主窗口里，位置由 chat.css 收敛到 #screen-book 内 -->
+  <link rel="stylesheet" href="notebook/notebook.css" />
+  <link rel="stylesheet" href="notebook/variants.css" />
+  <link rel="stylesheet" href="chat.css" />
+</head>
+<body>
+  <!-- ======= 解锁 / 创建界面 ======= -->
+  <!-- 版式改造自 GitHub 开源登录页 ui-code/ModernLoginPage（MIT），
+       表单字段/圆角胶囊装饰语言沿用其设计，配色是密码本的品牌绿。 -->
+  <div id="screen-lock" class="screen screen-lock">
+    <!-- 无边框窗口：顶部拖拽条 + 右上角窗口按钮 -->
+    <div class="lock-drag" aria-hidden="true"></div>
+    <div class="lock-winbar">
+      <button class="win-btn" data-win="min" title="最小化">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"><path d="M5 12h14"/></svg>
+      </button>
+      <button class="win-btn" data-win="max" title="最大化 / 还原">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><rect x="6" y="6" width="12" height="12" rx="1.8"/></svg>
+      </button>
+      <button class="win-btn win-close" data-win="close" title="关闭">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"><path d="M6.6 6.6 17.4 17.4M17.4 6.6 6.6 17.4"/></svg>
+      </button>
+    </div>
+
+    <div class="lock-split">
+      <!-- 左侧：品牌 + 胶囊装饰 + 动画小人 -->
+      <section class="lock-visual">
+        <div class="lock-pills" aria-hidden="true">
+          <span class="pill-1"></span>
+          <span class="pill-2"></span>
+          <span class="pill-3"></span>
+          <span class="pill-4"></span>
+        </div>
+
+        <div class="lock-brand">
+          <div class="logo-mark logo-mark-sm">本</div>
+          <span class="brand-name">密码本</span>
+        </div>
+
+        <div class="chars-stage" id="chars-stage"></div>
+
+        <div class="lock-visual-foot">
+          <span class="lock-chip">AES-256-GCM</span>
+          <span class="lock-chip">scrypt 派生</span>
+          <span class="lock-chip">数据不出设备</span>
+        </div>
+      </section>
+
+      <!-- 右侧：解锁 / 创建表单 -->
+      <section class="lock-form-side">
+        <form class="lock-panel" id="lock-form" autocomplete="off">
+          <div class="lock-logo-mobile">
+            <div class="logo-mark">本</div>
+          </div>
+          <h1 class="lock-title" id="lock-title">欢迎回来</h1>
+          <p class="lock-subtitle" id="lock-subtitle">翻开你的密码本</p>
+
+          <div class="lock-field-block">
+            <label class="lock-label" for="lock-password">主密码</label>
+            <div class="lock-field">
+              <svg class="field-icon" viewBox="0 0 24 24"><path fill="currentColor" d="M18 8h-1V6a5 5 0 0 0-10 0v2H6a2 2 0 0 0-2 2v10a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V10a2 2 0 0 0-2-2zm-6 9a2 2 0 1 1 0-4 2 2 0 0 1 0 4zM9 8V6a3 3 0 0 1 6 0v2H9z"/></svg>
+              <input id="lock-password" type="password" placeholder="请输入主密码" autocomplete="off" />
+              <button type="button" id="lock-eye" class="eye-btn" tabindex="-1" title="显示 / 隐藏密码">
+                <svg class="eye-open" viewBox="0 0 24 24"><path fill="currentColor" d="M12 5c-5 0-9 4.5-10 7 1 2.5 5 7 10 7s9-4.5 10-7c-1-2.5-5-7-10-7zm0 12a5 5 0 1 1 0-10 5 5 0 0 1 0 10zm0-8a3 3 0 1 0 0 6 3 3 0 0 0 0-6z"/></svg>
+                <svg class="eye-off" viewBox="0 0 24 24"><path fill="currentColor" d="M12 7a5 5 0 0 1 5 5c0 .65-.13 1.26-.36 1.83l2.92 2.92A11.8 11.8 0 0 0 22 12c-1-2.5-5-7-10-7-1.28 0-2.5.29-3.6.79l2.16 2.16C11 7.6 11.48 7 12 7zM2.7 3.7 1.3 5.1l2.5 2.5A11.8 11.8 0 0 0 2 12c1 2.5 5 7 10 7 1.9 0 3.66-.53 5.2-1.4l2.7 2.7 1.4-1.4L2.7 3.7zM12 17a5 5 0 0 1-4.66-3.15l1.55 1.55c.34.06.7.1 1.11.1a3 3 0 0 0 3-3c0-.4-.04-.77-.1-1.11L12.9 10.4A5 5 0 0 1 12 17z"/></svg>
+              </button>
+            </div>
+          </div>
+
+          <div class="lock-field-block hidden" id="lock-confirm-wrap">
+            <label class="lock-label" for="lock-confirm">确认主密码</label>
+            <div class="lock-field">
+              <svg class="field-icon" viewBox="0 0 24 24"><path fill="currentColor" d="M12 1 3 5v6c0 5.55 3.84 10.74 9 12 5.16-1.26 9-6.45 9-12V5l-9-4zm0 10.99h7c-.53 4.12-3.28 7.79-7 8.94V12H5V6.3l7-3.11v8.8z"/></svg>
+              <input id="lock-confirm" type="password" placeholder="再次输入主密码" autocomplete="off" />
+            </div>
+          </div>
+
+          <button id="lock-submit" class="btn btn-primary btn-block lock-submit">解锁</button>
+          <p class="lock-error" id="lock-error"></p>
+          <p class="lock-tip" id="lock-tip">数据仅加密存储在本地，不会上传到任何服务器。</p>
+        </form>
+      </section>
+    </div>
+  </div>
+
+  <!-- ======= 解锁之后：一本手写密码本 ======= -->
+  <div id="screen-app" class="screen hidden">
+    <!-- 自绘标题栏（无边框窗口，可拖拽） -->
+    <header class="titlebar">
+      <div class="tb-brand"><div class="logo-mark logo-mark-xs">本</div></div>
+      <span class="tb-appname">密码本</span>
+      <span class="tb-hint" id="tb-hint">本地加密 · 数据不出设备</span>
+      <span class="tb-spacer"></span>
+      <div class="tb-tools">
+        <button class="tb-btn" id="btn-generator" title="生成一个强密码">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M13.5 3.2 5.8 13h4.4l-.7 7.8 7.7-9.8h-4.4z"/></svg>
+        </button>
+        <button class="tb-btn" id="btn-settings" title="设置">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round"><path d="M4 7.5h9M18.5 7.5H20M4 16.5h3M12.5 16.5H20"/><circle cx="15.7" cy="7.5" r="2.4"/><circle cx="9.7" cy="16.5" r="2.4"/></svg>
+        </button>
+        <button class="tb-btn" id="btn-lock" title="合上本子（锁定，Ctrl+L）">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linejoin="round"><rect x="4.6" y="10.4" width="14.8" height="9.4" rx="2.4"/><path d="M8.2 10.4V7.8a3.8 3.8 0 0 1 7.6 0v2.6"/><circle cx="12" cy="15" r="1.2" fill="currentColor" stroke="none"/></svg>
+        </button>
+      </div>
+      <div class="win-actions">
+        <button class="win-btn" data-win="min" title="最小化">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"><path d="M5 12h14"/></svg>
+        </button>
+        <button class="win-btn" data-win="max" title="最大化 / 还原">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><rect x="6" y="6" width="12" height="12" rx="1.8"/></svg>
+        </button>
+        <button class="win-btn win-close" data-win="close" title="关闭">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"><path d="M6.6 6.6 17.4 17.4M17.4 6.6 6.6 17.4"/></svg>
+        </button>
+      </div>
+    </header>
+
+    <div class="app-body">
+      <section id="screen-book" class="view view-book">
+        <div class="desk" id="desk"></div>
+
+        <div class="stage" id="stage">
+          <div class="mat" id="mat"></div>
+          <div class="pen" id="pen"></div>
+          <div class="book-wrap" id="bookWrap">
+            <div class="book-shadow"></div>
+            <!-- 翻页引擎（turn.js）的容器：页面由 notebook.js 在这里生成 -->
+            <div class="book" id="book"></div>
+            <div class="gutter" id="gutter"></div>
+            <div class="ribbon" id="ribbon" title="翻到目录"><span>目<br>录</span></div>
+          </div>
+        </div>
+
+        <!-- 底部控制条 -->
+        <div class="hud">
+          <div class="hud-left">
+            <button class="hbtn" id="btnPrev" title="上一页（←）">‹ 上一页</button>
+            <button class="hbtn" id="btnNext" title="下一页（→）">下一页 ›</button>
+          </div>
+          <div class="hud-mid" id="pageLabel">封面</div>
+          <div class="hud-right">
+            <button class="hbtn hbtn-write" id="btnWriteNew" title="在新的一页写一条（Ctrl+N）">＋ 写一条</button>
+            <button class="hbtn" id="btnWriteEdit" title="改当前这页的那一条（也可以直接双击它）">改这条</button>
+            <button class="hbtn" id="btnToc" title="翻到目录">目录</button>
+            <button class="hbtn" id="btnMask" title="遮住 / 显示密码">遮住密码</button>
+            <button class="hbtn" id="btnSound" title="翻页音效">音效：关</button>
+          </div>
+        </div>
+
+        <div class="toast" id="nb-toast"></div>
+      </section>
+    </div>
+  </div>
+
+  <!-- ======= 写一条 / 改一条（编辑面板） ======= -->
+  <div id="drawer-backdrop" class="drawer-backdrop hidden"></div>
+  <aside id="drawer" class="drawer hidden">
+    <div class="drawer-header">
+      <div class="drawer-title" id="drawer-title">写一条</div>
+      <button id="drawer-close" class="icon-btn" title="关闭">✕</button>
+    </div>
+    <div class="drawer-body" id="drawer-body"></div>
+    <div class="drawer-footer" id="drawer-footer">
+      <button id="btn-save" class="btn btn-primary hidden">保存</button>
+      <button id="btn-delete" class="btn btn-danger hidden">删除</button>
+    </div>
+  </aside>
+
+  <!-- ======= 设置弹窗 ======= -->
+  <div id="modal-backdrop" class="drawer-backdrop hidden"></div>
+  <div id="settings-modal" class="modal hidden">
+    <div class="modal-header">
+      <div class="drawer-title">设置</div>
+      <button id="settings-close" class="icon-btn">✕</button>
+    </div>
+    <div class="modal-body">
+      <div class="setting-row">
+        <div class="setting-label">本子署名</div>
+        <div class="setting-control">
+          <input id="setting-owner" class="field" style="width:150px" placeholder="本子主人" />
+        </div>
+      </div>
+      <div class="setting-row">
+        <div class="setting-label">自动锁定</div>
+        <div class="setting-control">
+          <select id="setting-autolock" class="field">
+            <option value="1">1 分钟</option>
+            <option value="5">5 分钟</option>
+            <option value="15">15 分钟</option>
+            <option value="30">30 分钟</option>
+            <option value="0">从不</option>
+          </select>
+        </div>
+      </div>
+      <div class="setting-row">
+        <div class="setting-label">打开本子时默认显示密码</div>
+        <label class="switch">
+          <input type="checkbox" id="setting-showpwd" />
+          <span class="slider"></span>
+        </label>
+      </div>
+      <div class="setting-row setting-row-column">
+        <div class="setting-label">修改主密码</div>
+        <input id="set-oldpw" type="password" class="field" placeholder="当前主密码" autocomplete="off" />
+        <input id="set-newpw" type="password" class="field" placeholder="新主密码" autocomplete="off" />
+        <input id="set-newpw2" type="password" class="field" placeholder="再次输入新主密码" autocomplete="off" />
+        <button id="btn-change-master" class="btn btn-primary btn-sm">修改主密码</button>
+      </div>
+    </div>
+    <div class="modal-error" id="settings-error"></div>
+  </div>
+
+  <!-- ======= 密码生成器弹窗 ======= -->
+  <div id="gen-backdrop" class="drawer-backdrop hidden"></div>
+  <div id="gen-modal" class="modal hidden">
+    <div class="modal-header">
+      <div class="drawer-title">密码生成器</div>
+      <button id="gen-close" class="icon-btn">✕</button>
+    </div>
+    <div class="modal-body">
+      <div class="gen-result-row">
+        <input id="gen-password" type="text" class="field gen-field" readonly />
+        <button id="gen-copy" class="btn btn-secondary btn-sm">复制</button>
+        <button id="gen-refresh" class="btn btn-secondary btn-sm">↻</button>
+      </div>
+      <div class="gen-options">
+        <label>长度 <input id="gen-length" type="range" min="8" max="64" value="20" /> <span id="gen-length-val">20</span></label>
+        <label class="gen-check"><input type="checkbox" id="gen-upper" checked /> 大写</label>
+        <label class="gen-check"><input type="checkbox" id="gen-lower" checked /> 小写</label>
+        <label class="gen-check"><input type="checkbox" id="gen-digit" checked /> 数字</label>
+        <label class="gen-check"><input type="checkbox" id="gen-symbol" checked /> 符号</label>
+      </div>
+      <button id="gen-use" class="btn btn-primary btn-block">使用此密码</button>
+    </div>
+  </div>
+
+  <script src="characters.js"></script>
+  <script src="notebook/vendor/jquery.min.js"></script>
+  <script src="notebook/vendor/turn.js"></script>
+  <script src="notebook/notebook.js"></script>
+  <script src="app.js"></script>
+</body>
+</html>

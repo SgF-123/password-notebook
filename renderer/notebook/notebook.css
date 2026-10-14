@@ -1,0 +1,694 @@
+/* ==========================================================
+   密码本 · 手写本子 —— 仿真翻页（turn.js 风格，零依赖）
+   页面坐标约定：
+     正面(front) = 右页，书脊在左边缘
+     背面(back)  = 左页，书脊在右边缘（CSS 里按左页排版即可）
+   ========================================================== */
+:root {
+  --page-w: 440px;
+  --page-h: 600px;
+  --line: 28px;          /* 横线行距（手写字落在线上） */
+  --rule-in: 17px;       /* 横线在行内的高度位置 */
+  --mat-pad-x: 70px;     /* 桌垫比书本每边宽出多少（本子/背景板比例） */
+  --mat-pad-y: 60px;     /* 桌垫比书本上下多出多少 */
+  --book-pad-x: 26px;    /* 书相对舞台留白（越小本子越大）——fit() 读这个 */
+  --book-pad-y: 12px;
+  --scale: 1;
+
+  --paper: #fffdf7;              /* 纸：白一点、暖一点，别显得脏 */
+  --paper-2: #faf5ea;
+  --rule: rgba(86, 122, 172, .42);
+  --margin-line: rgba(200, 104, 104, .5);
+
+  --ink: #1c3f76;
+  --ink-2: #35558a;
+  --ink-soft: #5a6f8f;
+  --ink-fade: #929cb0;
+
+  --hand: 'STXingkai', '华文行楷', 'FZShuTi', '方正舒体', 'Segoe Print', 'Ink Free', 'KaiTi', '楷体', 'Microsoft YaHei', cursive;
+  --hand-num: 'Segoe Print', 'Ink Free', 'Bradley Hand ITC', 'KaiTi', '楷体', sans-serif;
+
+  --flip-ease: cubic-bezier(.22, .62, .26, 1);
+}
+
+* { box-sizing: border-box; }
+
+html, body {
+  height: 100%;
+  margin: 0;
+  overflow: hidden;
+  font-family: "Segoe UI", "Microsoft YaHei", system-ui, sans-serif;
+  background: #16171b;
+  color: #e8e8ea;
+  user-select: none;
+  -webkit-font-smoothing: antialiased;
+}
+
+/* ---------- 书桌 ---------- */
+.desk {
+  position: fixed;
+  inset: 0;
+  background:
+    radial-gradient(46% 40% at 24% 8%, rgba(255, 233, 190, .22), rgba(255, 233, 190, 0) 72%), /* 台灯光晕 */
+    radial-gradient(130% 90% at 50% 118%, rgba(0, 0, 0, .55), rgba(0, 0, 0, 0) 62%),
+    linear-gradient(168deg, #4b3725 0%, #34261a 38%, #221a12 70%, #140f0b 100%);
+}
+.desk::before {                      /* 木纹 */
+  content: '';
+  position: absolute;
+  inset: 0;
+  background-image:
+    repeating-linear-gradient(4deg, rgba(255, 226, 180, .05) 0 2px, rgba(0, 0, 0, 0) 2px 11px),
+    repeating-linear-gradient(3.2deg, rgba(0, 0, 0, .16) 0 1px, rgba(0, 0, 0, 0) 1px 27px),
+    repeating-linear-gradient(5deg, rgba(255, 210, 160, .035) 0 3px, rgba(0, 0, 0, 0) 3px 41px);
+  opacity: .85;
+}
+.desk::after {                       /* 颗粒 + 暗角 */
+  content: '';
+  position: absolute;
+  inset: 0;
+  background-image: var(--grain-dust);
+  opacity: .5;
+  pointer-events: none;
+}
+
+.stage {
+  position: fixed;
+  inset: 0 0 76px 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+/* ---------- 背景板（皮质桌垫） ---------- */
+.mat {
+  position: absolute;
+  left: 50%;
+  top: 50%;
+  /* 尺寸自适应走 transform 缩放：只让合成器干活，改宽高/边距会整屏重排重绘 */
+  width: calc(var(--page-w) * 2 + var(--mat-pad-x));
+  height: calc(var(--page-h) + var(--mat-pad-y));
+  border-radius: 24px;
+  transform: translate(-50%, -50%) scale(var(--scale, 1));
+  transition: transform .26s var(--flip-ease);
+  background:
+    radial-gradient(120% 130% at 26% 0%, rgba(255, 255, 255, .07), rgba(255, 255, 255, 0) 58%),
+    radial-gradient(80% 70% at 85% 100%, rgba(0, 0, 0, .35), rgba(0, 0, 0, 0) 70%),
+    linear-gradient(162deg, #212d38 0%, #18222c 52%, #101821 100%);
+  box-shadow:
+    0 34px 64px rgba(0, 0, 0, .55),
+    0 0 0 1px rgba(255, 255, 255, .07) inset,
+    0 2px 0 rgba(255, 255, 255, .05) inset;
+}
+.mat::before {                       /* 包边缝线 */
+  content: '';
+  position: absolute;
+  inset: 13px;
+  border: 1px dashed rgba(232, 222, 200, .17);
+  border-radius: 15px;
+}
+.mat::after {                        /* 角落压印 */
+  content: '密码本 · VAULT';
+  position: absolute;
+  left: 26px;
+  bottom: 18px;
+  font-family: "Microsoft YaHei", sans-serif;
+  font-size: 11px;
+  letter-spacing: .34em;
+  color: rgba(232, 222, 200, .17);
+}
+
+/* 桌垫上那支笔 */
+.pen {
+  position: absolute;
+  left: 50%;
+  top: 50%;
+  width: calc(310px * var(--scale, 1));
+  height: calc(15px * var(--scale, 1));
+  margin-left: calc(96px * var(--scale, 1));
+  margin-top: calc((var(--page-h) / 2 + 52px) * var(--scale, 1));
+  transform: rotate(-12.5deg);
+  border-radius: calc(8px * var(--scale, 1));
+  background: linear-gradient(180deg, #33475f 0%, #1b2734 42%, #0d151d 100%);
+  box-shadow: 0 calc(9px * var(--scale, 1)) calc(14px * var(--scale, 1)) rgba(0, 0, 0, .5);
+}
+.pen::before {                       /* 笔头 */
+  content: '';
+  position: absolute;
+  right: calc(-16px * var(--scale, 1));
+  top: 50%;
+  width: calc(18px * var(--scale, 1));
+  height: calc(7px * var(--scale, 1));
+  margin-top: calc(-3.5px * var(--scale, 1));
+  border-radius: 0 calc(4px * var(--scale, 1)) calc(4px * var(--scale, 1)) 0;
+  background: linear-gradient(180deg, #cbb476, #8a7638 60%, #5d4f21);
+}
+.pen::after {                        /* 笔夹 */
+  content: '';
+  position: absolute;
+  left: calc(34px * var(--scale, 1));
+  top: calc(3px * var(--scale, 1));
+  width: calc(78px * var(--scale, 1));
+  height: calc(3px * var(--scale, 1));
+  border-radius: 2px;
+  background: linear-gradient(90deg, rgba(255, 255, 255, .0), rgba(255, 244, 214, .5) 30%, rgba(255, 244, 214, .08));
+}
+
+/* ---------- 书本容器 ---------- */
+.book-wrap {
+  position: relative;
+  width: var(--book-w, calc(var(--page-w) * 2));
+  height: var(--book-h, var(--page-h));
+  transform: translateX(calc(var(--shift, 0) * 100%));
+  /* 封面/封底要单独摆正，这里会滑动。
+     注意别给这里加 will-change：把整本书提成一个合成层反而会掉帧，
+     而且"给页面加图层"在部分显卡上会合成失败（整本书空白）。 */
+  transition: transform .55s var(--flip-ease);
+}
+
+/* turn.js 的容器：自己不缩不转，只负责摆页（缩放会让拖拽坐标错位） */
+.book {
+  position: relative;
+  width: 100%;
+  height: 100%;
+}
+
+/* turn.js 的每一页：这里只兜个底色，定位/裁切/旋转都由库写在行内样式上 */
+.nb-page {
+  overflow: hidden;
+  background: linear-gradient(var(--paper), var(--paper-2));
+}
+/* 翻页的一瞬间才把页提升成独立合成层：软件渲染下每帧只做位移/混合，
+   不再逐帧重绘整页（实测丢帧 28 → 3）；翻完就撤，平时不占层。 */
+body.flipping .nb-page { will-change: transform; }
+/* 注意：这里**不要**给每页加 will-change/backface-visibility。
+   每页一个合成层，在部分显卡/驱动上会合成失败 —— 表现就是整本书空白只剩桌垫。 */
+
+/* 排版层：固定 440×600，按 --fit 等比缩放铺满整页 —— 手写版式不会跑 */
+.nb-fit {
+  position: absolute;
+  left: 0;
+  top: 0;
+  width: 440px;
+  height: 600px;
+  transform: scale(var(--fit, 1));
+  transform-origin: 0 0;
+}
+
+/* ---------- 书脊阴影 ---------- */
+.gutter {
+  position: absolute;
+  inset: 0;
+  z-index: 5000;
+  pointer-events: none;
+  transition: opacity .4s var(--flip-ease);
+  background: linear-gradient(90deg,
+    rgba(20, 16, 10, 0) 42%,
+    rgba(20, 16, 10, .28) 49.4%,
+    rgba(20, 16, 10, .5) 50%,
+    rgba(20, 16, 10, .28) 50.6%,
+    rgba(20, 16, 10, 0) 58%);
+}
+/* 只剩封面/封底一张纸的时候不该有中缝 */
+.book-wrap.at-cover .gutter, .book-wrap.at-end .gutter { opacity: 0; }
+
+/* ---------- 书本投影 ---------- */
+.book-shadow {
+  position: absolute;
+  left: 3%;
+  right: 3%;
+  bottom: -30px;
+  height: 46px;
+  pointer-events: none;
+  background: radial-gradient(50% 50% at 50% 50%, rgba(0, 0, 0, .55), rgba(0, 0, 0, 0) 72%);
+  filter: blur(5px);
+}
+
+/* ---------- 书签飘带 ---------- */
+.ribbon {
+  position: absolute;
+  top: -14px;
+  left: 50%;
+  width: 26px;
+  height: 74px;
+  margin-left: -13px;
+  z-index: 6000;
+  cursor: pointer;
+  transform-origin: 50% 0;
+  transition: transform .3s var(--flip-ease), opacity .3s;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+.ribbon span {
+  position: relative;
+  z-index: 1;
+  font-size: 10px;
+  line-height: 1.05;
+  letter-spacing: 1px;
+  color: #fff2ec;
+  text-shadow: 0 1px 2px rgba(0, 0, 0, .4);
+  font-family: "Microsoft YaHei", sans-serif;
+}
+.ribbon::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(180deg, #c8353b, #9e2229);
+  clip-path: polygon(0 0, 100% 0, 100% 100%, 50% 84%, 0 100%);
+  box-shadow: 0 3px 8px rgba(0, 0, 0, .45);
+}
+.ribbon:hover { transform: translateY(6px); }
+.book-wrap.at-cover .ribbon, .book-wrap.at-end .ribbon { opacity: 0; pointer-events: none; }
+
+/* ---------- 页面 ---------------------------------------------------- */
+.page {
+  position: absolute;
+  inset: 0;
+  padding: 44px 40px 40px;
+  background-color: var(--paper);
+  /* 纸纹并进背景层：同一个元素里做 multiply，不另开一层混色（翻页时省很多） */
+  background-image:
+    var(--grain),
+    repeating-linear-gradient(to bottom,
+      rgba(0, 0, 0, 0) 0 var(--rule-in),
+      var(--rule) var(--rule-in) calc(var(--rule-in) + 1px),
+      rgba(0, 0, 0, 0) calc(var(--rule-in) + 1px) var(--line));
+  background-size: 96px 96px, 100% var(--line);
+  background-position: 0 0, 0 44px;
+  background-repeat: repeat, repeat;
+  background-blend-mode: multiply, normal;
+  color: var(--ink);
+  font-family: var(--hand);
+  overflow: hidden;
+}
+.page::before { content: none; }   /* 纸纹已并入 background-image */
+/* 书脊侧压暗 */
+.page::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+}
+.page.right-page::after { background: linear-gradient(90deg, rgba(40, 32, 20, .18), rgba(40, 32, 20, 0) 11%); }
+.page.left-page::after { background: linear-gradient(270deg, rgba(40, 32, 20, .18), rgba(40, 32, 20, 0) 11%); }
+/* 横线 + 竖红 margin 线（本子感的关键） */
+.page.right-page {
+  padding: 44px 40px 40px 62px;
+  background-image:
+    var(--grain),
+    linear-gradient(90deg, rgba(0, 0, 0, 0) 0 51px, var(--margin-line) 51px 52px, rgba(0, 0, 0, 0) 52px),
+    repeating-linear-gradient(to bottom,
+      rgba(0, 0, 0, 0) 0 var(--rule-in),
+      var(--rule) var(--rule-in) calc(var(--rule-in) + 1px),
+      rgba(0, 0, 0, 0) calc(var(--rule-in) + 1px) var(--line));
+  background-size: 96px 96px, 100% 100%, 100% var(--line);
+  background-position: 0 0, 0 0, 0 44px;
+  background-repeat: repeat, no-repeat, repeat;
+  background-blend-mode: multiply, normal, normal;
+}
+.page.left-page {
+  padding: 44px 62px 40px 40px;
+  background-image:
+    var(--grain),
+    linear-gradient(270deg, rgba(0, 0, 0, 0) 0 51px, var(--margin-line) 51px 52px, rgba(0, 0, 0, 0) 52px),
+    repeating-linear-gradient(to bottom,
+      rgba(0, 0, 0, 0) 0 var(--rule-in),
+      var(--rule) var(--rule-in) calc(var(--rule-in) + 1px),
+      rgba(0, 0, 0, 0) calc(var(--rule-in) + 1px) var(--line));
+  background-size: 96px 96px, 100% 100%, 100% var(--line);
+  background-position: 0 0, 0 0, 0 44px;
+  background-repeat: repeat, no-repeat, repeat;
+  background-blend-mode: multiply, normal, normal;
+}
+.page.cover::after, .page.flyleaf::after { background: none; }
+
+.page-no {
+  position: absolute;
+  bottom: 14px;
+  font-family: var(--hand-num);
+  font-size: 13px;
+  color: var(--ink-fade);
+  letter-spacing: 1px;
+}
+.right-page .page-no { right: 34px; }
+.left-page .page-no { left: 34px; }
+
+/* ---------- 手写倾斜 ----------
+   同一页的文字整体歪一点（--tilt），每个条目再各自抖一点（--rot），
+   笔迹本身往右倾（--skew）。纸和横线保持水平，歪的只是字。 */
+.page > .entry {
+  transform: rotate(calc(var(--tilt, 0deg) + var(--rot, 0deg))) skewX(var(--skew, 0deg)) translateY(var(--dy, 0px));
+}
+.e-title i, .e-val i { font-style: normal; display: inline-block; }
+/* 目录行、标题、便签这类"手写的块"也跟着歪 */
+.toc-row { transform: rotate(calc(var(--tilt, 0deg) + var(--rowrot, 0deg))); }
+.page > .toc-head, .page > .toc-note, .page > .fly-box, .page > .sign, .page > .stat-row {
+  transform: rotate(var(--tilt, 0deg));
+}
+.page > .page-no { transform: none; }   /* 页码是"印"上去的，保持水平 */
+
+/* ---------- 目录页 ---------- */
+.toc-head {
+  font-family: var(--hand);
+  font-size: 32px;
+  letter-spacing: 8px;
+  color: var(--ink);
+  margin: 2px 0 22px;
+  transform: rotate(-.6deg);
+  display: flex;
+  align-items: baseline;
+  gap: 12px;
+}
+.toc-head small {
+  font-family: "Microsoft YaHei", sans-serif;
+  font-size: 11px;
+  letter-spacing: 2px;
+  color: var(--ink-fade);
+  transform: none;
+}
+.toc-row {
+  display: flex;
+  align-items: baseline;
+  gap: 8px;
+  height: var(--line);
+  font-family: var(--hand);
+  font-size: 17px;
+  color: var(--ink-2);
+  cursor: pointer;
+}
+.toc-row:hover .toc-title { color: var(--ink); text-decoration: underline dotted; }
+.toc-dot { width: 9px; height: 9px; border-radius: 50%; flex: 0 0 auto; transform: translateY(-1px); }
+.toc-title { flex: 0 0 auto; max-width: 58%; overflow: hidden; white-space: nowrap; text-overflow: ellipsis; }
+.toc-lead { flex: 1 1 auto; border-bottom: 1px dotted rgba(90, 110, 140, .5); transform: translateY(-4px); }
+.toc-page { flex: 0 0 auto; font-family: var(--hand-num); font-size: 14px; color: var(--ink-fade); }
+.toc-note {
+  margin-top: 20px;
+  font-family: var(--hand);
+  font-size: 15px;
+  color: var(--ink-fade);
+  line-height: var(--line);
+  transform: rotate(-.4deg);
+}
+
+/* ---------- 条目（每一项正好落在网格上） ---------- */
+.entry { transform: rotate(var(--rot, 0deg)) translateY(var(--dy, 0px)); }
+
+.e-head {
+  display: flex;
+  align-items: center;
+  gap: 9px;
+  height: var(--line);
+  font-size: 24px;
+  color: var(--ink);
+  letter-spacing: .5px;
+  transform: translateY(-2px);   /* 让标题基线压到横线上，而不是被横线穿过 */
+}
+.e-title { text-shadow: 0 1px 0 rgba(255, 255, 255, .8); }
+.e-dot {
+  width: 10px;
+  height: 10px;
+  border-radius: 50%;
+  background: var(--c, #4b7bec);
+  box-shadow: inset 0 0 0 1px rgba(255, 255, 255, .6);
+  flex: 0 0 auto;
+}
+.e-cat {
+  font-family: "Microsoft YaHei", sans-serif;
+  font-size: 10px;
+  letter-spacing: 1px;
+  color: var(--c, #4b7bec);
+  border: 1px solid currentColor;
+  border-radius: 3px;
+  padding: 0 4px;
+  opacity: .85;
+  transform: translateY(-2px) rotate(var(--tagrot, -3deg));
+}
+.e-star { color: #d69b2d; font-size: 16px; }
+
+.e-sep {
+  height: var(--line);
+  background-image: linear-gradient(90deg, rgba(90, 110, 140, .42), rgba(90, 110, 140, .06));
+  background-size: 100% 1px;
+  background-position: 0 62%;
+  background-repeat: no-repeat;
+  transform: rotate(var(--sep-rot, -.25deg));
+}
+
+.e-line {
+  display: flex;
+  align-items: baseline;
+  gap: 8px;
+  height: var(--line);
+  font-size: 17px;
+  line-height: var(--line);
+  color: var(--ink-2);
+}
+.e-line > .e-label {
+  flex: 0 0 auto;
+  font-family: var(--hand);
+  font-size: 14px;
+  color: var(--ink-soft);
+  opacity: .85;
+  min-width: 42px;
+}
+.e-val {
+  flex: 1 1 auto;
+  overflow: hidden;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+  font-family: var(--hand-num);
+  letter-spacing: .4px;
+  transform: rotate(var(--vrot, 0deg));
+}
+.e-val.cn { font-family: var(--hand); }
+.e-val.pw { cursor: pointer; color: #17457f; }
+.e-val.pw:hover { color: #0b2f60; text-decoration: underline dotted; }
+.e-val i { font-style: normal; display: inline-block; }
+.e-val.long { font-size: 15px; }
+.pw-dots { letter-spacing: 3px; font-size: 15px; }
+
+/* ---------- 封面 / 扉页 / 尾页 ---------- */
+.page.cover {
+  padding: 0;
+  background-color: #5b1d20;
+  background-image:
+    radial-gradient(120% 120% at 20% 0%, rgba(255, 190, 140, .18), transparent 55%),
+    radial-gradient(90% 80% at 90% 100%, rgba(0, 0, 0, .45), transparent 60%),
+    linear-gradient(150deg, #7a2a2c 0%, #5b1d20 45%, #3f1416 100%);
+  background-size: cover;
+  background-position: 0 0;
+}
+/* 封面单独一层薄纸纹（normal 混合，不用 mix-blend-mode，翻页时省一次混色往返） */
+.page.cover::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background-image: var(--grain);
+  background-size: 96px 96px;
+  opacity: .5;
+  pointer-events: none;
+}
+.cover-inner {
+  position: absolute;
+  inset: 22px;
+  border: 1px solid rgba(228, 196, 140, .45);
+  border-radius: 3px;
+  padding: 46px 34px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  text-align: center;
+  box-shadow: inset 0 0 60px rgba(0, 0, 0, .35);
+}
+.cover-title {
+  font-family: var(--hand);
+  font-size: 52px;
+  letter-spacing: 10px;
+  color: #f0d8a4;
+  text-shadow: 0 2px 0 rgba(60, 12, 14, .9), 0 -1px 0 rgba(255, 236, 190, .35), 0 6px 16px rgba(0, 0, 0, .5);
+}
+.cover-rule { width: 62%; height: 1px; margin: 14px 0; background: linear-gradient(90deg, transparent, rgba(228, 196, 140, .7), transparent); }
+.cover-sub { font-family: "Microsoft YaHei", sans-serif; font-size: 12px; letter-spacing: 6px; color: rgba(240, 216, 164, .75); }
+.cover-owner { margin-top: 16px; font-family: var(--hand); font-size: 19px; color: rgba(245, 226, 190, .9); transform: rotate(-1deg); }
+.cover-clasp {
+  position: absolute;
+  right: -3px;
+  top: 33%;
+  width: 38px;
+  height: 34%;
+  border-radius: 4px;
+  background: linear-gradient(90deg, #3d1214, #5b1d20 42%, #6d2426);
+  box-shadow: -5px 0 12px rgba(0, 0, 0, .55), inset -1px 0 0 rgba(255, 220, 170, .18);
+}
+.cover-clasp::after {
+  content: '';
+  position: absolute;
+  left: 50%;
+  top: 50%;
+  transform: translate(-50%, -50%);
+  width: 17px;
+  height: 26px;
+  border-radius: 3px;
+  background: linear-gradient(180deg, #e6c76c, #b08f34 55%, #7d611c);
+  box-shadow: 0 2px 5px rgba(0, 0, 0, .6), inset 0 1px 0 rgba(255, 248, 220, .7);
+}
+
+.page.flyleaf {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background-image: var(--grain);
+  background-size: 96px 96px;
+  background-blend-mode: multiply;
+  background-color: #fbf7ea;
+  padding: 0;
+}
+.fly-box { text-align: center; transform: rotate(-.8deg); padding: 0 40px; }
+.fly-title { font-family: var(--hand); font-size: 30px; letter-spacing: 6px; color: var(--ink); }
+.fly-line { margin-top: 18px; font-family: var(--hand); font-size: 16px; color: var(--ink-soft); line-height: 32px; }
+.fly-stamp {
+  margin: 26px auto 0;
+  width: 104px;
+  height: 104px;
+  border: 2px solid rgba(178, 60, 60, .55);
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: rgba(178, 60, 60, .72);
+  font-family: var(--hand);
+  font-size: 18px;
+  line-height: 1.25;
+  letter-spacing: 2px;
+  transform: rotate(-8deg);
+}
+
+.page.tailnote { padding: 52px 44px; }
+.tailnote h3 { font-family: var(--hand); font-size: 26px; letter-spacing: 4px; color: var(--ink); margin: 0 0 22px; }
+.tailnote p { font-family: var(--hand); font-size: 16px; line-height: var(--line); color: var(--ink-soft); margin: 0; }
+.stat-row { display: flex; gap: 34px; margin-top: 30px; padding-left: 4px; }
+.stat-box { min-width: 62px; text-align: center; }
+.stat-num { font-family: var(--hand-num); font-size: 32px; line-height: 42px; color: var(--ink); }
+.stat-cap { margin-top: 2px; font-size: 11px; letter-spacing: 2px; color: var(--ink-fade); font-family: "Microsoft YaHei", sans-serif; }
+
+.sign { margin-top: 34px; font-family: var(--hand); font-size: 16px; line-height: var(--line); color: var(--ink-soft); transform: rotate(-.5deg); }
+.sign-name { margin-top: 8px; text-align: right; font-size: 17px; color: var(--ink-2); }
+
+.blank-note {
+  position: absolute;
+  left: 0;
+  right: 0;
+  top: 44%;
+  text-align: center;
+  font-family: var(--hand);
+  font-size: 21px;
+  letter-spacing: 3px;
+  color: rgba(90, 110, 140, .34);
+  transform: rotate(-.6deg);
+}
+.blank-note span {
+  display: block;
+  margin-top: 12px;
+  font-size: 12px;
+  letter-spacing: 1.5px;
+  color: rgba(90, 110, 140, .28);
+}
+
+/* ---------- 底部控制条 ---------- */
+.hud {
+  position: fixed;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  height: 76px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 0 26px;
+  gap: 18px;
+  background: linear-gradient(180deg, rgba(8, 7, 6, 0) 0%, rgba(8, 7, 6, .5) 40%, rgba(8, 7, 6, .92) 100%);
+}
+.hud::before {                      /* 顶边一条暖色高光 */
+  content: '';
+  position: absolute;
+  left: 0;
+  right: 0;
+  top: 0;
+  height: 1px;
+  background: linear-gradient(90deg, transparent, rgba(228, 196, 140, .24), transparent);
+}
+.hud-left, .hud-right { display: flex; gap: 8px; align-items: center; }
+/* 中间那块页码牌 */
+.hud-mid {
+  padding: 5px 20px 6px;
+  border-radius: 999px;
+  border: 1px solid rgba(226, 214, 190, .14);
+  background: linear-gradient(180deg, rgba(255, 250, 240, .08), rgba(255, 250, 240, .03));
+  box-shadow: 0 1px 0 rgba(255, 255, 255, .06) inset, 0 8px 18px rgba(0, 0, 0, .28);
+  font-family: var(--hand-num);
+  font-size: 15px;
+  letter-spacing: 2px;
+  color: rgba(242, 234, 216, .92);
+  white-space: nowrap;
+}
+.hbtn {
+  min-width: 84px;
+  height: 36px;
+  padding: 0 16px;
+  border-radius: 999px;
+  border: 1px solid rgba(226, 214, 190, .18);
+  background: linear-gradient(180deg, rgba(255, 250, 240, .13), rgba(255, 250, 240, .045));
+  color: #efe6d4;
+  font-size: 13px;
+  letter-spacing: .5px;
+  font-family: "Microsoft YaHei", sans-serif;
+  cursor: pointer;
+  box-shadow: 0 1px 0 rgba(255, 255, 255, .09) inset, 0 6px 14px rgba(0, 0, 0, .26);
+  transition: background .18s, border-color .18s, color .18s, transform .1s, box-shadow .18s;
+}
+.hbtn:hover {
+  background: linear-gradient(180deg, rgba(255, 250, 240, .22), rgba(255, 250, 240, .09));
+  border-color: rgba(236, 214, 168, .45);
+  color: #fffaee;
+}
+.hbtn:active {
+  transform: translateY(1px) scale(.985);
+  box-shadow: 0 2px 7px rgba(0, 0, 0, .38) inset;
+}
+.hbtn:focus-visible { outline: 2px solid rgba(228, 196, 140, .55); outline-offset: 2px; }
+.hbtn.on {                          /* 开着的开关：跟封面的暗红呼应 */
+  background: linear-gradient(180deg, rgba(206, 66, 72, .48), rgba(150, 36, 42, .4));
+  border-color: rgba(240, 150, 150, .55);
+  color: #fff0ef;
+  box-shadow: 0 1px 0 rgba(255, 255, 255, .14) inset, 0 6px 16px rgba(120, 20, 24, .32);
+}
+#btnPrev, #btnNext { min-width: 98px; }
+#btnNext { border-color: rgba(226, 214, 190, .3); }
+
+/* ---------- 提示 ---------- */
+.toast {
+  position: fixed;
+  left: 50%;
+  bottom: 108px;
+  transform: translate(-50%, 12px);
+  padding: 9px 20px;
+  border-radius: 20px;
+  background: rgba(20, 18, 16, .88);
+  border: 1px solid rgba(230, 214, 180, .25);
+  color: #f2e9d8;
+  font-size: 13px;
+  font-family: "Microsoft YaHei", sans-serif;
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity .25s, transform .25s;
+}
+.toast.show { opacity: 1; transform: translate(-50%, 0); }
+
+/* 遮住密码 */
+body.masked .pw-real { display: none; }
+body:not(.masked) .pw-dots { display: none; }
+
+/* 自检探针（截图/几何校验用） */
+.probe { position: absolute; left: 0; top: 0; width: 40px; height: 16px; background: #f0f; }
