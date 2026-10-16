@@ -1,7 +1,7 @@
 {
   "name": "password-notebook",
   "productName": "密码本",
-  "version": "1.1.0",
+  "version": "1.1.1",
   "description": "本地加密的手写密码本：输主密码翻开一本能写能翻的本子",
   "main": "src/main/index.js",
   "author": "FRee",

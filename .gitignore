@@ -9,3 +9,11 @@ dist-mac/
 V2/shots/
 *.bak
 V2/
+
+# ---- 数据 / 备份：绝不进仓库（这个仓库是公开的）----
+_backup/installed-data-*/
+_backup/**/vault.dat*
+_backup/**/userdata/
+vault.dat
+vault.dat.*
+objects/

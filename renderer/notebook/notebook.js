@@ -100,6 +100,14 @@ const state = { sound: false };
 let pageW = PAGE_W;
 let pageH = PAGE_H;
 let book = null;
+// 翻页请求排队：turn.js 在动画进行中会把新的跳页请求丢掉（表现："点了目录不动"、甚至这一页和
+// 页码对不上）。所以正在翻的时候先把目标记下来，等 turned 事件来了立刻补上，一次都不丢。
+let pendingPage = 0;
+let turning = false;
+let turnSafety = null;
+// 自己记的"当前页"：turn.js 的 turn('page') 在跨到新的对开页时会把**左页**报成当前页
+// （实测 3→2、15→14），拿它当判断依据就会误判、跳页也会被吞掉。这里只信我们自己记的。
+let wantPage = 1;
 let hasFitted = false;      // fit() 的短路用：至少量过一次，且尺寸变了才动
 
 // ---------- 挂载 / 重挂 ----------
@@ -174,13 +182,22 @@ export function mount(raw, opts) {
         document.body.classList.remove('flipping');
         updateLabel(page);
         swish(1);
+        const wasOurTurn = turning;
+        turning = false;
+        // 我们发起的翻页：wantPage 早就设好了，别用 turn.js 的回报覆盖（它跨对开页时报的是左页）；
+        // 只有用户自己拖页角翻的（wasOurTurn 为 false）才按它同步。
+        if (!wasOurTurn) wantPage = page;
+        flushPendingPage();        // 动画期间攒下的跳页请求，这时候补上
         releaseSheetWrite();       // 翻到了：放开按住的那一页，开始动笔（事件驱动，不猜时间）
       }
     }
   });
 
   // 拖拽被取消/松手没翻成时，也要把合成层标记摘掉
-  book.bind('end', () => document.body.classList.remove('flipping'));
+  book.bind('end', () => {
+    document.body.classList.remove('flipping');
+    if (turning) { turning = false; flushPendingPage(); }
+  });
   bindPageClicks();          // 新的 #book 容器，页内点击要重新绑
   bindSheet(el.book, {       // 正在写的那一页，把纸上的按钮接起来
     onSave: submitEdit,
@@ -198,6 +215,9 @@ export function mount(raw, opts) {
   });
 
   resetSheetWrite();
+  turning = false;
+  pendingPage = 0;
+  clearTimeout(turnSafety);
   el.wrap.classList.remove('at-cover', 'at-end');
   document.documentElement.style.setProperty('--shift', 0);
   // 起始页可能是「原来那一页」（opts.keep）：标签 / 左右居中按本子真实的当前页来刷
@@ -205,12 +225,13 @@ export function mount(raw, opts) {
   fit();
   // 写在纸上的那一页：默认马上动笔；要翻一页过去时 app 层会调 holdSheetWrite 把它推后
   armSheetSoon();          // 默认下一帧动笔；app 要翻页的话会紧接着调 holdSheetWrite()
+  wantPage = keepPage > 1 ? Math.min(keepPage, pages.length) : 1;
 
   return {
     pages,
     pageCount: pages.length,
     pageOf: (id) => pageOfItem.get(id) || 0,
-    page: book.turn('page') || 1
+    page: wantPage
   };
 }
 
@@ -244,7 +265,7 @@ export function fit() {
 function updateLabel(pageNo) {
   if (!book) return;
   const total = pages.length;
-  pageNo = pageNo || book.turn('page');
+  pageNo = pageNo || wantPage;
   const atCover = pageNo <= 1;
   const atEnd = pageNo >= total;
   el.wrap.classList.toggle('at-cover', atCover);
@@ -253,12 +274,39 @@ function updateLabel(pageNo) {
   document.documentElement.style.setProperty('--shift', atCover ? -0.25 : (atEnd ? 0.25 : 0));
 }
 
-export function next() { book.turn('next'); }
-export function prev() { book.turn('previous'); }
-export function gotoPage(pageNo) {
-  const n = Math.max(1, Math.min(pages.length, pageNo | 0));
-  if (n === book.turn('page')) return;
+export function next() { turnBy(1); }
+export function prev() { turnBy(-1); }
+export function gotoPage(pageNo) { turnTo(pageNo | 0); }
+
+/** 往上/往下翻：排队时以"已经排到的那一页"为基准，连按几次就往前走几页（不合并、不丢） */
+function turnBy(step) {
+  turnTo((pendingPage || wantPage) + step);
+}
+
+/** 统一入口：正在翻就排队，翻完立刻补上 */
+function turnTo(pageNo) {
+  const n = Math.max(1, Math.min(pages.length, pageNo));
+  if (n === wantPage) return;                       // 已经在（或者正要去的）就是这一页
+  if (turning) { pendingPage = n; return; }         // 动画中：记住目标，别丢
+  startTurn(n);
+}
+
+function startTurn(n) {
+  turning = true;
+  wantPage = n;
+  clearTimeout(turnSafety);
+  // 兜底：万一 turned 没来（拖拽中断之类），到点自己解锁
+  turnSafety = setTimeout(() => { turning = false; flushPendingPage(); }, FLIP_MS * 1.8);
   book.turn('page', n);
+}
+
+function flushPendingPage() {
+  clearTimeout(turnSafety);
+  if (!pendingPage) return;
+  const n = pendingPage;
+  pendingPage = 0;
+  if (n === book.turn('page')) return;
+  startTurn(n);
 }
 
 // ---------- 页内交互：目录跳页 / 点密码复制 ----------
@@ -577,6 +625,7 @@ window.__nb = {
   submitEdit,
   cancelEdit,
   get editId() { return editInfo ? editInfo.id : null; },
+  get wantPage() { return wantPage; },          // 应用自己记的当前页（turn('page') 跨对开页时会报左页）
   setMasked,
   setSound
 };

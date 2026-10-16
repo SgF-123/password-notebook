@@ -28,7 +28,7 @@ export function mountBook(jumpToId, keepPage) {
     // 就在这一页：马上动笔；要翻过去：先把动作往后压，等翻到了再写
     if (page && page !== res.page) {
       holdSheetWrite();                              // 按住写在纸上的那一页，等翻到了再放开
-      requestAnimationFrame(() => gotoPage(page));    // 下一帧就翻，中间不留空拍
+      setTimeout(() => gotoPage(page), 80);           // 等 turn.js 站稳再翻（太急会翻错页）
     }
   }
   return res;

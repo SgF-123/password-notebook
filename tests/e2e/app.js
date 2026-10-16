@@ -243,6 +243,49 @@ async function main() {
   await wait(900);
   check('书签带（目录）能跳页', (await q(`window.__nb.currentPage()`)) >= 2, await q(`window.__nb.currentPage()`));
 
+  // 翻页不能被吞：慢慢翻三页，每页都要真的往前走
+  r = await q(`(async () => {
+    const out = [];
+    for (let i = 0; i < 3; i++) {
+      const before = window.__nb.currentPage();
+      window.__nb.next();
+      await new Promise((res) => setTimeout(res, 1000));
+      out.push(before + '>' + window.__nb.currentPage());
+    }
+    return out.join(' ');
+  })()`);
+  check('慢慢翻三页：每次都真的往前走', r.split(' ').every((p) => p.split('>')[0] !== p.split('>')[1]), r);
+
+  // 连按也不能丢：连点 4 次，最终要往前走 4 页（允许动画慢慢追上）
+  r = await q(`(async () => {
+    window.__nb.gotoPage(1);                       // 先回到第 1 页，不然已经到最后一页了
+    await new Promise((res) => setTimeout(res, 1400));
+    const before = window.__nb.currentPage();
+    for (let i = 0; i < 4; i++) { window.__nb.next(); await new Promise((res) => setTimeout(res, 40)); }
+    await new Promise((res) => setTimeout(res, 4000));
+    return { before, after: window.__nb.wantPage, turnReport: window.__nb.currentPage(), total: window.__nb.pageCount };
+  })()`);
+  check('连按 4 次下一页：一次都不丢（累计前进）', r.after - r.before === 4, r);
+
+  // 每一行目录点过去，那一页都要真的出现在视野里
+  r = await q(`(async () => {
+    const rows = [...document.querySelectorAll('.toc-row')];
+    const stage = document.getElementById('stage').getBoundingClientRect();
+    const bad = [];
+    for (const row of rows) {
+      const want = Number(row.dataset.page);
+      row.dispatchEvent(new MouseEvent('click', { bubbles: true }));
+      await new Promise((res) => setTimeout(res, 850));
+      const els = [...document.querySelectorAll('#book .nb-page .page-no')];
+      const hit = els.find((e) => Number(e.textContent) === want);
+      if (!hit) { bad.push(want + '不在DOM'); continue; }
+      const rr = hit.closest('.nb-page').getBoundingClientRect();
+      if (!(rr.left < stage.right - 4 && rr.right > stage.left + 4)) bad.push(want + '不在视野');
+    }
+    return { rows: rows.length, bad: bad.join(',') };
+  })()`);
+  check('目录每一行点完，那一页真的在视野里', r.bad === '', r);
+
   // ---------- 7. 改这条 ----------
   await q(`__app.editItem(__app.state.payload.items[0].id); true`);
   const editUp = await waitFor(`!!document.querySelector('.es')`, 5000);
