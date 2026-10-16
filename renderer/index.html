@@ -96,9 +96,11 @@
     <header class="titlebar">
       <div class="tb-brand"><div class="logo-mark logo-mark-xs">本</div></div>
       <span class="tb-appname">密码本</span>
-      <span class="tb-hint" id="tb-hint">本地加密 · 数据不出设备</span>
       <span class="tb-spacer"></span>
       <div class="tb-tools">
+        <button class="tb-btn tb-btn--write" id="btn-write-new" title="在新的一页写一条（Ctrl+N）">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M12 5.6v12.8M5.6 12h12.8"/></svg>
+        </button>
         <button class="tb-btn" id="btn-generator" title="生成一个强密码">
           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M13.5 3.2 5.8 13h4.4l-.7 7.8 7.7-9.8h-4.4z"/></svg>
         </button>
@@ -128,7 +130,6 @@
 
         <div class="stage" id="stage">
           <div class="mat" id="mat"></div>
-          <div class="pen" id="pen"></div>
           <div class="book-wrap" id="bookWrap">
             <div class="book-shadow"></div>
             <!-- 翻页引擎（turn.js）的容器：页面由 notebook.js 在这里生成 -->
@@ -138,40 +139,11 @@
           </div>
         </div>
 
-        <!-- 底部控制条 -->
-        <div class="hud">
-          <div class="hud-left">
-            <button class="hbtn" id="btnPrev" title="上一页（←）">‹ 上一页</button>
-            <button class="hbtn" id="btnNext" title="下一页（→）">下一页 ›</button>
-          </div>
-          <div class="hud-mid" id="pageLabel">封面</div>
-          <div class="hud-right">
-            <button class="hbtn hbtn-write" id="btnWriteNew" title="在新的一页写一条（Ctrl+N）">＋ 写一条</button>
-            <button class="hbtn" id="btnWriteEdit" title="改当前这页的那一条（也可以直接双击它）">改这条</button>
-            <button class="hbtn" id="btnToc" title="翻到目录">目录</button>
-            <button class="hbtn" id="btnMask" title="遮住 / 显示密码">遮住密码</button>
-            <button class="hbtn" id="btnSound" title="翻页音效">音效：关</button>
-          </div>
-        </div>
-
+        <!-- 底部控制条：左边"看"（翻页 + 目录 / 密码 / 音效），中间页码，右边"写"（写一条 / 改这条） -->
         <div class="toast" id="nb-toast"></div>
       </section>
     </div>
   </div>
-
-  <!-- ======= 写一条 / 改一条（编辑面板） ======= -->
-  <div id="drawer-backdrop" class="drawer-backdrop hidden"></div>
-  <aside id="drawer" class="drawer hidden">
-    <div class="drawer-header">
-      <div class="drawer-title" id="drawer-title">写一条</div>
-      <button id="drawer-close" class="icon-btn" title="关闭">✕</button>
-    </div>
-    <div class="drawer-body" id="drawer-body"></div>
-    <div class="drawer-footer" id="drawer-footer">
-      <button id="btn-save" class="btn btn-primary hidden">保存</button>
-      <button id="btn-delete" class="btn btn-danger hidden">删除</button>
-    </div>
-  </aside>
 
   <!-- ======= 设置弹窗 ======= -->
   <div id="modal-backdrop" class="drawer-backdrop hidden"></div>
@@ -203,6 +175,13 @@
         <div class="setting-label">打开本子时默认显示密码</div>
         <label class="switch">
           <input type="checkbox" id="setting-showpwd" />
+          <span class="slider"></span>
+        </label>
+      </div>
+      <div class="setting-row">
+        <div class="setting-label">翻页音效</div>
+        <label class="switch">
+          <input type="checkbox" id="setting-sound" />
           <span class="slider"></span>
         </label>
       </div>
@@ -244,7 +223,7 @@
   <script src="characters.js"></script>
   <script src="notebook/vendor/jquery.min.js"></script>
   <script src="notebook/vendor/turn.js"></script>
-  <script src="notebook/notebook.js"></script>
-  <script src="app.js"></script>
+  <!-- app.js 是 ES module：本子（notebook/）和 app/ 下的模块由它自己 import -->
+  <script type="module" src="app.js"></script>
 </body>
 </html>

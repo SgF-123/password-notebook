@@ -335,7 +335,7 @@ body {
 .lock-tip { color: var(--text-3); font-size: 12px; margin-top: 16px; }
 
 
-/* ============ 抽屉（详情） ============ */
+/* ============ 遮罩 / 弹窗标题（模态框共用） ============ */
 .drawer-backdrop {
   position: fixed;
   inset: 0;
@@ -343,152 +343,7 @@ body {
   z-index: 50;
 }
 
-.drawer {
-  position: fixed;
-  top: 0;
-  right: 0;
-  bottom: 0;
-  width: 460px;
-  max-width: 92vw;
-  background: var(--card-bg);
-  z-index: 60;
-  display: flex;
-  flex-direction: column;
-  box-shadow: -8px 0 30px rgba(0, 0, 0, 0.12);
-  animation: slideIn 0.22s ease;
-}
-
-@keyframes slideIn {
-  from { transform: translateX(60px); opacity: 0; }
-  to { transform: translateX(0); opacity: 1; }
-}
-
-.drawer-header {
-  height: 56px;
-  border-bottom: 1px solid var(--border);
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  padding: 0 18px;
-  flex-shrink: 0;
-}
-
 .drawer-title { font-size: 16px; font-weight: 600; }
-
-.drawer-body {
-  flex: 1;
-  overflow-y: auto;
-  padding: 20px 18px;
-}
-
-.drawer-footer {
-  padding: 14px 18px;
-  border-top: 1px solid var(--border);
-  display: flex;
-  gap: 10px;
-  flex-shrink: 0;
-}
-
-.drawer-footer .btn { flex: 1; }
-
-.detail-field { margin-bottom: 16px; }
-
-.detail-field label {
-  display: block;
-  font-size: 12px;
-  color: var(--text-3);
-  margin-bottom: 6px;
-}
-
-.detail-value-row {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  border: 1px solid var(--border);
-  border-radius: 8px;
-  padding: 9px 12px;
-  background: var(--bg);
-  min-height: 38px;
-}
-
-.detail-value-row .value {
-  flex: 1;
-  word-break: break-all;
-  font-family: Consolas, monospace;
-  font-size: 13px;
-  user-select: text;
-}
-
-.detail-value-row .value.plain { font-family: inherit; }
-
-.row-action {
-  border: none;
-  background: transparent;
-  color: var(--text-2);
-  cursor: pointer;
-  font-size: 13px;
-  padding: 4px 6px;
-  border-radius: 6px;
-}
-
-.row-action:hover { background: #e3e5e8; color: var(--text); }
-
-.detail-input {
-  width: 100%;
-  height: 38px;
-  border: 1px solid var(--border);
-  border-radius: 8px;
-  padding: 0 12px;
-  font-size: 13px;
-  outline: none;
-  font-family: inherit;
-  color: var(--text);
-  user-select: text;
-}
-
-.detail-input:focus { border-color: var(--primary); }
-
-textarea.detail-input {
-  height: auto;
-  min-height: 84px;
-  padding: 10px 12px;
-  resize: vertical;
-  line-height: 1.5;
-}
-
-.detail-cats {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 8px;
-}
-
-.detail-cats .cat-chip {
-  padding: 6px 14px;
-  border: 1px solid var(--border);
-  border-radius: 15px;
-  background: #fff;
-  font-size: 13px;
-  cursor: pointer;
-  color: var(--text-2);
-  transition: all 0.15s;
-  font-family: inherit;
-}
-
-.detail-cats .cat-chip.active {
-  background: var(--primary-soft);
-  border-color: var(--primary);
-  color: var(--primary);
-  font-weight: 600;
-}
-
-.gen-row {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-}
-
-.gen-row .detail-input { flex: 1; }
-
 /* ============ 弹窗 ============ */
 .modal {
   position: fixed;
@@ -604,4 +459,10 @@ textarea.detail-input {
   .lock-form-side { padding: 32px 24px; }
   .lock-logo-mobile { display: block; margin-bottom: 22px; }
   .lock-logo-mobile .logo-mark { width: 56px; height: 56px; font-size: 26px; }
+}
+
+/* 生成器里那串密码：等宽字体好逐字读 */
+#gen-password {
+  font-family: "Cascadia Mono", Consolas, "SF Mono", Menlo, "DejaVu Sans Mono", "Courier New", monospace;
+  letter-spacing: .5px;
 }

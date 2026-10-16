@@ -14,40 +14,41 @@
   flex: 0 0 auto;
   display: flex;
   align-items: center;
-  gap: 10px;
-  padding-left: 0;
-  background: linear-gradient(90deg, #2f2f2f 0 68px, #f6f7f8 68px);
-  border-bottom: 1px solid #e2e3e5;
+  gap: 8px;
+  padding-left: 12px;
+  background: #fbfaf8;                 /* 跟纸面一个暖白，不再切一块黑的出来 */
+  border-bottom: 1px solid #e9e5dd;
   -webkit-app-region: drag;
 }
 
 .titlebar .tb-brand {
-  width: 68px;
   flex: 0 0 auto;
   display: flex;
   align-items: center;
   justify-content: center;
+  margin-right: 2px;
 }
 
 .logo-mark-xs {
   width: 26px;
   height: 26px;
-  border-radius: 7px;
+  border-radius: 8px;
   font-size: 14px;
-  box-shadow: none;
+  box-shadow: 0 1px 2px rgba(7, 193, 96, .3);
 }
 
 .titlebar .tb-appname {
   font-size: 13.5px;
   font-weight: 600;
-  color: var(--text);
-  letter-spacing: 0.3px;
+  color: #33312e;
+  letter-spacing: 0.6px;
 }
 
 .titlebar .tb-hint { font-size: 12px; color: var(--text-3); }
 .titlebar .tb-spacer { flex: 1; }
 
-/* 标题栏上的三个工具按钮（生成器 / 设置 / 合上本子） */
+/* 标题栏上的三个工具按钮（生成器 / 设置 / 合上本子）
+   三个收进一个浅色胶囊：右边就只剩"工具一组 + 窗口按钮一组"两块，不再是一排散图标 */
 .tb-tools {
   display: flex;
   align-items: center;
@@ -57,26 +58,41 @@
 
 .tb-btn {
   width: 32px;
-  height: 30px;
+  height: 28px;
   border: none;
-  border-radius: 8px;
+  border-radius: 9px;
   background: transparent;
-  color: #5a616b;
+  color: #5f6a76;
   cursor: pointer;
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  transition: background 0.15s, color 0.15s;
+  transition: background 0.15s, color 0.15s, box-shadow 0.15s;
 }
 
 .tb-btn svg { width: 17px; height: 17px; }
-.tb-btn:hover { background: #e6e7e9; color: var(--text); }
+
+.tb-btn:hover { background: #fff; color: #2b2b2b; box-shadow: 0 1px 3px rgba(0, 0, 0, .09); }
+
+/* 写一条：常驻的主入口 —— 一颗小的品牌绿按钮（原先是一枚细绿十字，飘在灰底上） */
+.tb-tools .tb-btn--write {
+  width: 34px;
+  background: linear-gradient(180deg, #12c96a, #07b158);
+  color: #fff;
+  box-shadow: 0 1px 3px rgba(7, 177, 88, .32);
+}
+.tb-tools .tb-btn--write:hover {
+  background: linear-gradient(180deg, #10bd63, #06a451);
+  color: #fff;
+  box-shadow: 0 2px 6px rgba(7, 177, 88, .38);
+}
 
 .win-actions {
   display: flex;
   align-items: stretch;
   align-self: stretch;
-  margin-left: 6px;
+  margin-left: 10px;
+  border-left: 1px solid #eae7e0;    /* 跟左边那组工具隔开 */
   -webkit-app-region: no-drag;
 }
 
@@ -93,9 +109,9 @@
   transition: background 0.15s, color 0.15s;
 }
 
-.win-btn svg { width: 15px; height: 15px; }
-.win-btn:hover { background: #e6e7e9; color: var(--text); }
-.win-btn.win-close:hover { background: #e64340; color: #fff; }
+.win-btn svg { width: 14px; height: 14px; }
+.win-btn:hover { background: rgba(0, 0, 0, .055); color: #2b2b2b; }
+.win-btn.win-close:hover { background: #e81123; color: #fff; }
 
 /* 解锁屏上的窗口按钮（右上角悬浮）与顶部拖拽条 */
 .lock-winbar {
@@ -109,8 +125,8 @@
 }
 
 .lock-winbar .win-btn { width: 44px; height: 40px; }
-.lock-winbar .win-btn:hover { background: #e6e7e9; color: var(--text); }
-.lock-winbar .win-btn.win-close:hover { background: #e64340; color: #fff; }
+.lock-winbar .win-btn:hover { background: rgba(0, 0, 0, .055); color: #2b2b2b; }
+.lock-winbar .win-btn.win-close:hover { background: #e81123; color: #fff; }
 
 .lock-drag {
   position: fixed;
@@ -142,22 +158,10 @@
    嵌进主窗口之后收进 #screen-book，别盖住标题栏 */
 #screen-book .desk { position: absolute; }
 #screen-book .stage { position: absolute; }
-#screen-book .hud { position: absolute; }
 #screen-book .toast { position: absolute; }
 
-/* 本子上那颗「＋ 写一条」：比同排的翻页按钮显眼一点 */
-#btnWriteNew {
-  background: linear-gradient(180deg, rgba(7, 193, 96, 0.5), rgba(6, 173, 86, 0.42));
-  border-color: rgba(160, 240, 196, 0.55);
-  color: #f0fff7;
-  font-weight: 600;
-}
-
-#btnWriteNew:hover {
-  background: linear-gradient(180deg, rgba(7, 193, 96, 0.72), rgba(6, 173, 86, 0.6));
-  border-color: rgba(190, 250, 215, 0.7);
-  color: #ffffff;
-}
+/* 底栏那颗「写一条」的绿色主按钮样式已经收进 notebook.css 的 .hbtn--primary，
+   这里不再按 id 单独改，免得同一种按钮在两处有两条互相打架的规则。 */
 
 /* ---------- 解锁 → 翻开本子 的过渡 ---------- */
 /* 解锁屏脱出常规流、固定成浮层淡出，底下的书桌淡进来，本子轻轻"落"到桌面上 */
@@ -171,13 +175,16 @@
 
 @keyframes lockOut {
   from { opacity: 1; transform: scale(1); filter: blur(0); }
-  to { opacity: 0; transform: scale(1.035); filter: blur(3px); }
+  /* 别用 filter: blur：全屏元素每帧都要重栅格化（实测一次卡 248ms）。scale + 透明度就够。 */
+  /* 不用 scale：整屏缩放要每帧重新栅格化（软件光栅下一次 84ms），
+     而且缩放过程中字会发虚。淡出 + 一点点上浮，观感差不太多，代价差很多。 */
+  to { opacity: 0; transform: translateY(-8px); }
 }
 
 .screen-lock.lock-entering { animation: lockIn 0.34s ease both; }
 
 @keyframes lockIn {
-  from { opacity: 0; transform: scale(1.02); }
+  from { opacity: 0; transform: translateY(6px); }
   to { opacity: 1; transform: none; }
 }
 
@@ -201,7 +208,7 @@
 }
 
 @keyframes bookSettle {
-  from { opacity: 0; transform: scale(0.93) translateY(26px); }
+  from { opacity: 0; transform: translateY(30px); }
   to { opacity: 1; transform: none; }
 }
 
@@ -220,8 +227,7 @@
   .screen-lock.lock-entering,
   #screen-app.app-entering .titlebar,
   #screen-app.app-entering .desk,
-  #screen-app.app-entering .stage,
-  #screen-app.app-entering .hud { animation: none !important; }
+  #screen-app.app-entering .stage { animation: none !important; }
 }
 
 /* ---------- 共用小件 ---------- */
@@ -244,19 +250,6 @@
 .icon-btn svg { width: 19px; height: 19px; }
 .brand-name { font-weight: 600; }
 
-/* 编辑面板里的方形头像 */
-.avatar-sq {
-  width: 54px;
-  height: 54px;
-  border-radius: 13px;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  color: #fff;
-  font-size: 22px;
-  font-weight: 600;
-  flex-shrink: 0;
-}
 
 /* ---------- 把程序自己的底子拉回来 ---------- */
 /* notebook.css / variants.css 给 html,body 定了通体深色（那是给整页本子用的），

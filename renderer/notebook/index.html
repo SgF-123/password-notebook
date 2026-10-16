@@ -14,7 +14,6 @@
   <!-- 书桌台面 + 书本 -->
   <div class="stage" id="stage">
     <div class="mat" id="mat"></div>
-    <div class="pen" id="pen"></div>
     <div class="book-wrap" id="bookWrap">
       <div class="book-shadow"></div>
       <!-- 翻页引擎（turn.js）的容器：页面由 notebook.js 在这里生成 -->
@@ -24,24 +23,11 @@
     </div>
   </div>
 
-  <!-- 底部控制条 -->
-  <div class="hud">
-    <div class="hud-left">
-      <button class="hbtn" id="btnPrev" title="上一页（←）">‹ 上一页</button>
-      <button class="hbtn" id="btnNext" title="下一页（→）">下一页 ›</button>
-    </div>
-    <div class="hud-mid" id="pageLabel">封面</div>
-    <div class="hud-right">
-      <button class="hbtn" id="btnToc" title="目录">目录</button>
-      <button class="hbtn" id="btnMask" title="遮住密码">遮住密码</button>
-      <button class="hbtn" id="btnSound" title="翻页音效">音效：关</button>
-    </div>
-  </div>
-
+  <!-- 底部控制条：左边"看"（翻页 + 目录 / 密码 / 音效），中间页码（这一页没有写/改按钮） -->
   <div class="toast" id="toast"></div>
 
   <script src="vendor/jquery.min.js"></script>
   <script src="vendor/turn.js"></script>
-  <script src="notebook.js"></script>
+  <script type="module" src="notebook.js"></script>
 </body>
 </html>

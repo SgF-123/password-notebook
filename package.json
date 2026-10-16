@@ -1,14 +1,16 @@
 {
   "name": "password-notebook",
   "productName": "密码本",
-  "version": "1.0.0",
+  "version": "1.1.0",
   "description": "本地加密的手写密码本：输主密码翻开一本能写能翻的本子",
-  "main": "main.js",
+  "main": "src/main/index.js",
   "author": "FRee",
   "license": "MIT",
   "scripts": {
     "start": "electron .",
-    "notebook": "electron notebook-preview.js",
+    "test": "node --test \"tests/unit/*.test.js\"",
+    "test:e2e": "electron tests/e2e/app.js",
+    "notebook": "electron tools/notebook-preview.js",
     "build": "electron-builder --win nsis",
     "build:mac": "electron-builder --mac dmg zip",
     "build:mac:arm64": "electron-builder --mac dmg --arm64",
@@ -25,9 +27,7 @@
       "output": "dist"
     },
     "files": [
-      "main.js",
-      "vault-core.js",
-      "preload.js",
+      "src/**/*",
       "renderer/**/*",
       "package.json"
     ],

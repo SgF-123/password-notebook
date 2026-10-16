@@ -31,12 +31,7 @@ html:not([data-variant]) .mat, html[data-variant="A"] .mat {
     0 0 0 1px rgba(255, 255, 255, .5) inset,
     0 2px 0 rgba(255, 255, 255, .6) inset;
 }
-html:not([data-variant]) .mat::before, html[data-variant="A"] .mat::before { border-color: rgba(150, 118, 78, .4); }
 html:not([data-variant]) .mat::after, html[data-variant="A"] .mat::after { color: rgba(120, 92, 58, .5); }
-html:not([data-variant]) .pen, html[data-variant="A"] .pen {
-  background: linear-gradient(180deg, #3a2f22 0%, #241c13 46%, #140f09 100%);
-  box-shadow: 0 9px 14px rgba(40, 26, 10, .45);
-}
 
 /* ---------- B · 极简水泥灰 + 磨砂石板垫 ---------- */
 html[data-variant="B"] body { background: #3c3f45; }

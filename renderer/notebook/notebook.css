@@ -25,8 +25,10 @@
   --ink-soft: #5a6f8f;
   --ink-fade: #929cb0;
 
-  --hand: 'STXingkai', '华文行楷', 'FZShuTi', '方正舒体', 'Segoe Print', 'Ink Free', 'KaiTi', '楷体', 'Microsoft YaHei', cursive;
-  --hand-num: 'Segoe Print', 'Ink Free', 'Bradley Hand ITC', 'KaiTi', '楷体', sans-serif;
+  /* 字迹用国标楷体：KaiTi / 楷体_GB2312 是系统自带的国标楷书，稳、认得出；
+     行楷、舒体那类"看运气装没装"的字体不再当首选 */
+  --hand: 'KaiTi_GB2312', '楷体_GB2312', 'KaiTi', '楷体', 'STKaiti', '华文楷体', 'SimSun', '宋体', serif;
+  --hand-num: 'KaiTi', '楷体', 'KaiTi_GB2312', 'Times New Roman', serif;
 
   --flip-ease: cubic-bezier(.22, .62, .26, 1);
 }
@@ -41,7 +43,9 @@ html, body {
   background: #16171b;
   color: #e8e8ea;
   user-select: none;
-  -webkit-font-smoothing: antialiased;
+  /* 别用 antialiased（那是灰度抗锯齿，Win 上偏软）；
+     auto = 系统默认的次像素渲染（ClearType），小字更锐 */
+  -webkit-font-smoothing: auto;
 }
 
 /* ---------- 书桌 ---------- */
@@ -74,7 +78,7 @@ html, body {
 
 .stage {
   position: fixed;
-  inset: 0 0 76px 0;
+  inset: 0;
   display: flex;
   align-items: center;
   justify-content: center;
@@ -100,13 +104,6 @@ html, body {
     0 0 0 1px rgba(255, 255, 255, .07) inset,
     0 2px 0 rgba(255, 255, 255, .05) inset;
 }
-.mat::before {                       /* 包边缝线 */
-  content: '';
-  position: absolute;
-  inset: 13px;
-  border: 1px dashed rgba(232, 222, 200, .17);
-  border-radius: 15px;
-}
 .mat::after {                        /* 角落压印 */
   content: '密码本 · VAULT';
   position: absolute;
@@ -116,42 +113,6 @@ html, body {
   font-size: 11px;
   letter-spacing: .34em;
   color: rgba(232, 222, 200, .17);
-}
-
-/* 桌垫上那支笔 */
-.pen {
-  position: absolute;
-  left: 50%;
-  top: 50%;
-  width: calc(310px * var(--scale, 1));
-  height: calc(15px * var(--scale, 1));
-  margin-left: calc(96px * var(--scale, 1));
-  margin-top: calc((var(--page-h) / 2 + 52px) * var(--scale, 1));
-  transform: rotate(-12.5deg);
-  border-radius: calc(8px * var(--scale, 1));
-  background: linear-gradient(180deg, #33475f 0%, #1b2734 42%, #0d151d 100%);
-  box-shadow: 0 calc(9px * var(--scale, 1)) calc(14px * var(--scale, 1)) rgba(0, 0, 0, .5);
-}
-.pen::before {                       /* 笔头 */
-  content: '';
-  position: absolute;
-  right: calc(-16px * var(--scale, 1));
-  top: 50%;
-  width: calc(18px * var(--scale, 1));
-  height: calc(7px * var(--scale, 1));
-  margin-top: calc(-3.5px * var(--scale, 1));
-  border-radius: 0 calc(4px * var(--scale, 1)) calc(4px * var(--scale, 1)) 0;
-  background: linear-gradient(180deg, #cbb476, #8a7638 60%, #5d4f21);
-}
-.pen::after {                        /* 笔夹 */
-  content: '';
-  position: absolute;
-  left: calc(34px * var(--scale, 1));
-  top: calc(3px * var(--scale, 1));
-  width: calc(78px * var(--scale, 1));
-  height: calc(3px * var(--scale, 1));
-  border-radius: 2px;
-  background: linear-gradient(90deg, rgba(255, 255, 255, .0), rgba(255, 244, 214, .5) 30%, rgba(255, 244, 214, .08));
 }
 
 /* ---------- 书本容器 ---------- */
@@ -191,8 +152,12 @@ body.flipping .nb-page { will-change: transform; }
   top: 0;
   width: 440px;
   height: 600px;
-  transform: scale(var(--fit, 1));
-  transform-origin: 0 0;
+  /* 用 zoom 而不是 transform: scale()：
+     前者是"真布局缩放"—— 字按最终大小重新栅格化（清晰）；
+     后者是先按 440px 画好再整体拉伸（重采样发虚）。
+     系统缩放 125% + 本子 1.07 倍时，后者相当于按 1.34 倍的非整数比重采样。 */
+  zoom: var(--fit, 1);
+
 }
 
 /* ---------- 书脊阴影 ---------- */
@@ -343,7 +308,7 @@ body.flipping .nb-page { will-change: transform; }
 .e-title i, .e-val i { font-style: normal; display: inline-block; }
 /* 目录行、标题、便签这类"手写的块"也跟着歪 */
 .toc-row { transform: rotate(calc(var(--tilt, 0deg) + var(--rowrot, 0deg))); }
-.page > .toc-head, .page > .toc-note, .page > .fly-box, .page > .sign, .page > .stat-row {
+.page > .toc-head, .page > .toc-note, .page > .fly-box, .page > .sign, .page > .stat-line {
   transform: rotate(var(--tilt, 0deg));
 }
 .page > .page-no { transform: none; }   /* 页码是"印"上去的，保持水平 */
@@ -361,9 +326,9 @@ body.flipping .nb-page { will-change: transform; }
   gap: 12px;
 }
 .toc-head small {
-  font-family: "Microsoft YaHei", sans-serif;
-  font-size: 11px;
-  letter-spacing: 2px;
+  font-family: var(--hand);
+  font-size: 13px;
+  letter-spacing: 1.5px;
   color: var(--ink-fade);
   transform: none;
 }
@@ -426,11 +391,13 @@ body.flipping .nb-page { will-change: transform; }
 }
 .e-star { color: #d69b2d; font-size: 16px; }
 
+/* 条目之间那一道：只是标题下面随手画的一小笔。
+   别拉成横贯整页的表格线 —— 那样就跟本子的横线打架了 */
 .e-sep {
   height: var(--line);
-  background-image: linear-gradient(90deg, rgba(90, 110, 140, .42), rgba(90, 110, 140, .06));
-  background-size: 100% 1px;
-  background-position: 0 62%;
+  background-image: linear-gradient(90deg, rgba(90, 110, 140, .32), rgba(90, 110, 140, 0));
+  background-size: 128px 1px;
+  background-position: 0 6px;
   background-repeat: no-repeat;
   transform: rotate(var(--sep-rot, -.25deg));
 }
@@ -466,7 +433,8 @@ body.flipping .nb-page { will-change: transform; }
 .e-val.pw:hover { color: #0b2f60; text-decoration: underline dotted; }
 .e-val i { font-style: normal; display: inline-block; }
 .e-val.long { font-size: 15px; }
-.pw-dots { letter-spacing: 3px; font-size: 15px; }
+/* 遮住密码的那串点：轻一点、小一点，别比手写的字还抢眼 */
+.pw-dots { font-size: 13px; letter-spacing: 2px; color: rgba(35, 70, 125, .5); }
 
 /* ---------- 封面 / 扉页 / 尾页 ---------- */
 .page.cover {
@@ -548,6 +516,7 @@ body.flipping .nb-page { will-change: transform; }
 .fly-box { text-align: center; transform: rotate(-.8deg); padding: 0 40px; }
 .fly-title { font-family: var(--hand); font-size: 30px; letter-spacing: 6px; color: var(--ink); }
 .fly-line { margin-top: 18px; font-family: var(--hand); font-size: 16px; color: var(--ink-soft); line-height: 32px; }
+.fly-line--hint { margin-top: 26px; font-size: 13px; line-height: 26px; color: var(--ink-fade); }
 .fly-stamp {
   margin: 26px auto 0;
   width: 104px;
@@ -568,10 +537,23 @@ body.flipping .nb-page { will-change: transform; }
 .page.tailnote { padding: 52px 44px; }
 .tailnote h3 { font-family: var(--hand); font-size: 26px; letter-spacing: 4px; color: var(--ink); margin: 0 0 22px; }
 .tailnote p { font-family: var(--hand); font-size: 16px; line-height: var(--line); color: var(--ink-soft); margin: 0; }
-.stat-row { display: flex; gap: 34px; margin-top: 30px; padding-left: 4px; }
-.stat-box { min-width: 62px; text-align: center; }
-.stat-num { font-family: var(--hand-num); font-size: 32px; line-height: 42px; color: var(--ink); }
-.stat-cap { margin-top: 2px; font-size: 11px; letter-spacing: 2px; color: var(--ink-fade); font-family: "Microsoft YaHei", sans-serif; }
+/* 尾页的统计：一行手写就够（原来那排大数字比正文还抢眼） */
+.stat-line { margin-top: 26px; font-family: var(--hand); font-size: 17px; letter-spacing: 0; color: var(--ink-soft); }
+.stat-line b { font-family: var(--hand-num); font-size: 21px; font-weight: 400; color: var(--ink); }
+
+/* 尾页上那行"点这里开一页新的"：手写 + 虚线下划线，像本子里画的一行 */
+.tail-action {
+  margin-top: 30px;
+  font-family: var(--hand);
+  font-size: 17px;
+  letter-spacing: 1px;
+  color: #1f5aa8;
+  text-decoration: underline dotted rgba(31, 90, 168, .55);
+  text-underline-offset: 6px;
+  cursor: pointer;
+  display: inline-block;
+}
+.tail-action:hover { color: #0b2f60; text-decoration-color: #0b2f60; }
 
 .sign { margin-top: 34px; font-family: var(--hand); font-size: 16px; line-height: var(--line); color: var(--ink-soft); transform: rotate(-.5deg); }
 .sign-name { margin-top: 8px; text-align: right; font-size: 17px; color: var(--ink-2); }
@@ -596,82 +578,11 @@ body.flipping .nb-page { will-change: transform; }
   color: rgba(90, 110, 140, .28);
 }
 
-/* ---------- 底部控制条 ---------- */
-.hud {
-  position: fixed;
-  left: 0;
-  right: 0;
-  bottom: 0;
-  height: 76px;
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  padding: 0 26px;
-  gap: 18px;
-  background: linear-gradient(180deg, rgba(8, 7, 6, 0) 0%, rgba(8, 7, 6, .5) 40%, rgba(8, 7, 6, .92) 100%);
-}
-.hud::before {                      /* 顶边一条暖色高光 */
-  content: '';
-  position: absolute;
-  left: 0;
-  right: 0;
-  top: 0;
-  height: 1px;
-  background: linear-gradient(90deg, transparent, rgba(228, 196, 140, .24), transparent);
-}
-.hud-left, .hud-right { display: flex; gap: 8px; align-items: center; }
-/* 中间那块页码牌 */
-.hud-mid {
-  padding: 5px 20px 6px;
-  border-radius: 999px;
-  border: 1px solid rgba(226, 214, 190, .14);
-  background: linear-gradient(180deg, rgba(255, 250, 240, .08), rgba(255, 250, 240, .03));
-  box-shadow: 0 1px 0 rgba(255, 255, 255, .06) inset, 0 8px 18px rgba(0, 0, 0, .28);
-  font-family: var(--hand-num);
-  font-size: 15px;
-  letter-spacing: 2px;
-  color: rgba(242, 234, 216, .92);
-  white-space: nowrap;
-}
-.hbtn {
-  min-width: 84px;
-  height: 36px;
-  padding: 0 16px;
-  border-radius: 999px;
-  border: 1px solid rgba(226, 214, 190, .18);
-  background: linear-gradient(180deg, rgba(255, 250, 240, .13), rgba(255, 250, 240, .045));
-  color: #efe6d4;
-  font-size: 13px;
-  letter-spacing: .5px;
-  font-family: "Microsoft YaHei", sans-serif;
-  cursor: pointer;
-  box-shadow: 0 1px 0 rgba(255, 255, 255, .09) inset, 0 6px 14px rgba(0, 0, 0, .26);
-  transition: background .18s, border-color .18s, color .18s, transform .1s, box-shadow .18s;
-}
-.hbtn:hover {
-  background: linear-gradient(180deg, rgba(255, 250, 240, .22), rgba(255, 250, 240, .09));
-  border-color: rgba(236, 214, 168, .45);
-  color: #fffaee;
-}
-.hbtn:active {
-  transform: translateY(1px) scale(.985);
-  box-shadow: 0 2px 7px rgba(0, 0, 0, .38) inset;
-}
-.hbtn:focus-visible { outline: 2px solid rgba(228, 196, 140, .55); outline-offset: 2px; }
-.hbtn.on {                          /* 开着的开关：跟封面的暗红呼应 */
-  background: linear-gradient(180deg, rgba(206, 66, 72, .48), rgba(150, 36, 42, .4));
-  border-color: rgba(240, 150, 150, .55);
-  color: #fff0ef;
-  box-shadow: 0 1px 0 rgba(255, 255, 255, .14) inset, 0 6px 16px rgba(120, 20, 24, .32);
-}
-#btnPrev, #btnNext { min-width: 98px; }
-#btnNext { border-color: rgba(226, 214, 190, .3); }
-
 /* ---------- 提示 ---------- */
 .toast {
   position: fixed;
   left: 50%;
-  bottom: 108px;
+  bottom: 40px;
   transform: translate(-50%, 12px);
   padding: 9px 20px;
   border-radius: 20px;
@@ -692,3 +603,242 @@ body:not(.masked) .pw-dots { display: none; }
 
 /* 自检探针（截图/几何校验用） */
 .probe { position: absolute; left: 0; top: 0; width: 40px; height: 16px; background: #f0f; }
+
+/* ==========================================================
+   写在纸上的那一页（「写一条」/「改这一条」）
+   这一页不是写好的字，而是一张能直接写的表格：
+   每行高 = 一个行距(--line)，行里输入框的高 = --rule-in，
+   输入框的下边线正好压在本子那条横线上 —— 写进去的字就落在线上。
+   ========================================================== */
+.page > .es { transform: none; }        /* 格子是正的，歪的只有字 */
+
+.es-head {
+  display: flex;
+  align-items: baseline;
+  gap: 10px;
+  height: calc(var(--line) * 2);        /* 占满两行：后面每一行才落在横线上 */
+  padding-top: 4px;
+}
+.es-title { font-family: var(--hand); font-size: 27px; color: var(--ink); letter-spacing: 1px; }
+.es-sub { font-family: "Microsoft YaHei", sans-serif; font-size: 12px; color: var(--ink-fade); }
+
+.es-row {
+  display: flex;
+  align-items: flex-start;
+  gap: 8px;
+  height: var(--line);
+}
+.es-label {
+  flex: 0 0 42px;
+  font-family: var(--hand);
+  font-size: 15px;
+  line-height: var(--rule-in);
+  color: var(--ink-soft);
+  opacity: .9;
+}
+
+.es-in {
+  flex: 1 1 auto;
+  min-width: 0;
+  height: var(--rule-in);               /* 17px：底边线正好落在纸上那条横线上 */
+  line-height: var(--rule-in);
+  padding: 0 2px;
+  border: 0;
+  border-bottom: 1px dashed rgba(86, 122, 172, .5);
+  border-radius: 0;
+  background: transparent;
+  color: var(--ink);
+  font-family: var(--hand-num);
+  font-size: 16px;
+  letter-spacing: .4px;
+  outline: none;
+  user-select: text;
+  -webkit-user-select: text;
+}
+.es-in.es-title-in { font-family: var(--hand); font-size: 18px; }
+.es-in::placeholder { font-family: "Microsoft YaHei", sans-serif; font-size: 12px; color: rgba(90, 110, 140, .38); }
+.es-in:focus {
+  border-bottom-color: var(--ink-2);
+  background: linear-gradient(180deg, rgba(255, 240, 170, 0), rgba(255, 233, 150, .4));
+}
+/* 密码这一列：读密码要一眼分得清字符，用等宽字体
+   （行楷好看，但 0/O、1/l、5/S 容易认错；本子上手写那部分是味道，不动） */
+.es-pw {
+  color: #17457f;
+  font-family: "Cascadia Mono", Consolas, "SF Mono", Menlo, "DejaVu Sans Mono", "Courier New", monospace;
+  font-size: 15px;
+  letter-spacing: .5px;
+  font-variant-numeric: tabular-nums slashed-zero;
+}
+.es-pw[type="password"] { font-family: var(--hand-num); letter-spacing: 2px; }
+
+/* 行里的小按钮：⚡ / 复制 / 打开 */
+.es-mini {
+  flex: 0 0 auto;
+  height: 19px;
+  padding: 0 7px;
+  border: 1px solid rgba(86, 122, 172, .45);
+  border-radius: 10px;
+  background: rgba(255, 255, 255, .55);
+  color: var(--ink-soft);
+  font-family: "Microsoft YaHei", sans-serif;
+  font-size: 11px;
+  line-height: 17px;
+  cursor: pointer;
+}
+.es-mini:hover { background: #fff; color: var(--ink); border-color: var(--ink-2); }
+
+/* 分类：纸上的小标签 */
+.es-cats { display: flex; gap: 5px; }
+.es-cat {
+  height: 19px;
+  padding: 0 6px;
+  border: 1px solid rgba(86, 122, 172, .45);
+  border-radius: 10px;
+  background: rgba(255, 255, 255, .5);
+  color: var(--ink-soft);
+  font-family: "Microsoft YaHei", sans-serif;
+  font-size: 11px;
+  line-height: 17px;
+  cursor: pointer;
+}
+.es-cat.active { background: var(--c, #4b7bec); border-color: var(--c, #4b7bec); color: #fff; }
+
+.es-fav {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  height: var(--rule-in);
+  font-family: "Microsoft YaHei", sans-serif;
+  font-size: 12px;
+  color: var(--ink-soft);
+  cursor: pointer;
+}
+.es-fav input { accent-color: #d69b2d; margin: 0; }
+
+/* 动作：写进本子 / 撕掉这页（改的时候多一个"撕掉这页"） */
+.es-actions { display: flex; gap: 10px; margin-top: 16px; }
+.es-btn {
+  flex: 1 1 0;
+  height: 38px;
+  border: 1px solid transparent;
+  border-radius: 10px;
+  font-family: var(--hand);
+  font-size: 17px;
+  letter-spacing: 1px;
+  cursor: pointer;
+}
+.es-btn--save { background: var(--primary, #07c160); color: #fff; box-shadow: 0 2px 8px rgba(7, 193, 96, .28); }
+.es-btn--save:hover { background: var(--primary-hover, #06ad56); }
+.es-btn--cancel { background: rgba(255, 255, 255, .55); border-color: rgba(120, 90, 90, .32); color: #9c4a44; }
+.es-btn--cancel:hover { background: #fff; }
+.es-btn--danger { flex: 0 0 92px; background: rgba(255, 255, 255, .55); border-color: rgba(214, 63, 58, .35); color: #c0392b; }
+.es-btn--danger:hover { background: #fff; }
+
+
+/* ==========================================================
+   看一眼这条密码（👁 → 输主密码）
+   ========================================================== */
+.es-eye { font-family: "Segoe UI Symbol", "Microsoft YaHei", sans-serif; font-size: 12px; }
+.es-eye.on { background: var(--ink); border-color: var(--ink); color: #fff; }
+
+.ask-mask {
+  position: fixed; inset: 0; z-index: 70;
+  display: flex; align-items: center; justify-content: center;
+  background: rgba(26, 20, 12, .42);
+}
+.ask-box {
+  width: 296px; padding: 18px 18px 14px;
+  border: 1px solid rgba(120, 100, 70, .35); border-radius: 14px;
+  background: #fbf7ef; color: var(--ink);
+  box-shadow: 0 18px 44px rgba(0, 0, 0, .3);
+}
+.ask-title { font-size: 15px; font-weight: 600; letter-spacing: .5px; }
+.ask-sub { margin-top: 6px; font-size: 12px; line-height: 18px; color: rgba(70, 60, 45, .72); }
+.ask-input {
+  margin-top: 12px; width: 100%; box-sizing: border-box; height: 32px; padding: 0 10px;
+  border: 1px solid rgba(120, 100, 70, .4); border-radius: 8px;
+  background: #fff; color: var(--ink); font-size: 14px;
+  font-family: "Microsoft YaHei", sans-serif; outline: none;
+}
+.ask-input:focus { border-color: #2f6fbf; }
+.ask-err { min-height: 16px; margin-top: 6px; font-size: 12px; color: #c0392b; }
+.ask-row { display: flex; justify-content: flex-end; gap: 8px; margin-top: 2px; }
+.ask-btn {
+  height: 28px; padding: 0 14px; border-radius: 8px;
+  border: 1px solid rgba(120, 100, 70, .4); background: #fff; color: var(--ink);
+  font-size: 13px; font-family: "Microsoft YaHei", sans-serif; cursor: pointer;
+}
+.ask-btn--ok { background: #07c160; border-color: #07c160; color: #fff; }
+.ask-btn:disabled { opacity: .6; cursor: default; }
+/* ---------- 本子页面上那颗 👁 / 读出来的密码 ---------- */
+.e-eye {
+  flex: 0 0 auto; align-self: center;
+  width: 20px; height: 20px; padding: 0;
+  border: 1px solid rgba(86, 122, 172, .45); border-radius: 50%;
+  background: rgba(255, 255, 255, .5); color: var(--ink-soft);
+  font-size: 11px; line-height: 18px; cursor: pointer; opacity: .65;
+}
+.e-eye:hover { opacity: 1; background: #fff; color: var(--ink); border-color: var(--ink-2); }
+.e-eye.on { opacity: 1; background: var(--ink); border-color: var(--ink); color: #fff; }
+
+/* 读出来的那条：等宽字体、一行放得下（本子上手写那部分照旧） */
+.pw-read {
+  font-family: "Cascadia Mono", Consolas, "SF Mono", Menlo, "DejaVu Sans Mono", "Courier New", monospace;
+  font-size: 14px; letter-spacing: .3px; white-space: nowrap; color: #0b2f60;
+}
+.e-val.pw.pw-shown .pw-real { display: none; }
+.e-val.pw.pw-shown .pw-dots { display: none; }
+/* ==========================================================
+   写一条 / 改这一条 的"动作"
+   - 新写：像从本子里抽出一张新纸，落在你面前，表格一行一行写出来
+   - 改这条：像原来的墨迹化开，聚成一张能写的表格
+   - 写进本子 / 撕掉：各有一个收尾动作
+   --t0 是"什么时候动笔"：就在这一页是 40ms；要翻一页过去就推到翻完（约 620ms）
+   ========================================================== */
+@keyframes es-drop-in {
+  /* 只用位移 + 透明度：交给合成器，不重栅格化（blur 会把整页每帧重画一遍） */
+  from { opacity: 0; transform: translateY(24px) rotate(-1deg) scale(.982); }
+  to   { opacity: 1; transform: none; }
+}
+@keyframes es-ink-in {
+  from { opacity: 0; transform: scale(.93); }
+  to   { opacity: 1; transform: none; }
+}
+@keyframes es-row-in {
+  from { opacity: 0; transform: translateX(-8px); }
+  to   { opacity: 1; transform: none; }
+}
+@keyframes es-going-out {
+  to { opacity: 0; transform: translateY(-18px) rotate(1.4deg) scale(.975); }
+}
+@keyframes es-rip-out {
+  0%   { opacity: 1; }
+  30%  { transform: rotate(-1.1deg) translateX(-7px); }
+  100% { opacity: 0; transform: translateX(-64px) rotate(-17deg) scale(.93); }
+}
+
+.es--pending { visibility: hidden; }   /* 按住：翻页还没落定，先别露脸 */
+.es-armed.es--new  { animation: es-drop-in var(--sheet-in-ms, 440ms) cubic-bezier(.22, .68, .24, 1) both; }
+.es-armed.es--edit { animation: es-ink-in var(--sheet-in-ms, 440ms) ease-out both; }
+
+/* 一行一行"写"出来（.es 的孩子：1=标题头 2..8=格子 9=按钮） */
+.es-armed.es--new .es-head { animation: es-row-in .28s ease-out both; animation-delay: calc(var(--row-stagger-ms, 48ms) * .5); }
+.es-armed.es--new .es-row { animation: es-row-in .28s ease-out both; animation-delay: var(--row-stagger-ms, 48ms); }
+.es-armed.es--new .es-row:nth-child(3) { animation-delay: calc(var(--row-stagger-ms, 48ms) * 2); }
+.es-armed.es--new .es-row:nth-child(4) { animation-delay: calc(var(--row-stagger-ms, 48ms) * 3); }
+.es-armed.es--new .es-row:nth-child(5) { animation-delay: calc(var(--row-stagger-ms, 48ms) * 4); }
+.es-armed.es--new .es-row:nth-child(6) { animation-delay: calc(var(--row-stagger-ms, 48ms) * 5); }
+.es-armed.es--new .es-row:nth-child(7) { animation-delay: calc(var(--row-stagger-ms, 48ms) * 6); }
+.es-armed.es--new .es-row:nth-child(8) { animation-delay: calc(var(--row-stagger-ms, 48ms) * 7); }
+.es-armed.es--new .es-actions { animation: es-row-in .28s ease-out both; animation-delay: var(--es-actions-delay, 400ms); }
+
+.es.es-going  { animation: es-going-out var(--sheet-out-ms, 240ms) ease-in both; }
+.es.es-ripped { animation: es-rip-out var(--sheet-rip-ms, 440ms) cubic-bezier(.36, .07, .62, 1) both; }
+
+/* 系统里开了"减少动态效果"就不动 */
+@media (prefers-reduced-motion: reduce) {
+  .es--pending { visibility: visible; }
+  .es-armed, .es-armed.es--new .es-head, .es-armed.es--new .es-row, .es-armed.es--new .es-actions,
+  .es.es-going, .es.es-ripped { animation: none !important; }
+}

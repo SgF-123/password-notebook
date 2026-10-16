@@ -1,5 +1,7 @@
-/* 生成 macOS/Windows 都能用的应用图标：build/icon.png（1024×1024）
+/* 【旧版】生成 macOS/Windows 都能用的应用图标：build/icon.png（1024×1024）
    画法和界面里的 logo 一致：绿色圆角方块 + 白色「本」 */
+/* 现在的图标改用 work/icons/apply-icon.js（一次出 png/ico/icns + 窗口图标），
+   想要回「本」字版可以跑：node_modules\.bin\electron.cmd work\icons\apply-icon.js char */
 const { app, BrowserWindow } = require('electron');
 const path = require('path');
 const fs = require('fs');

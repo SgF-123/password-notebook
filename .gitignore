@@ -6,4 +6,6 @@ dist/
 data/
 data-test/
 dist-mac/
-
+V2/shots/
+*.bak
+V2/

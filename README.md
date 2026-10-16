@@ -10,12 +10,19 @@ AES-256-GCM 加密引擎）合成同一个软件 —— 输完主密码，窗口
 - 🔐 主密码解锁：scrypt 密钥派生 + AES-256-GCM 加密存储
 - 🎬 登录 → 翻开本子：解锁屏淡出、书桌淡入、本子轻轻"落"到桌面上，控制条随后升起
 - 📖 解锁即进本子：封面 → 扉页 → 目录 → 一页一条密码 → 封底，turn.js 仿真翻页（四角都能拖）
-- ✍️ 在本子上写：底部「＋ 写一条」（Ctrl+N）开写，双击本子里某一条直接改，写完自动翻到那一页
+- ✍️ 在本子上写：底部「写一条」（Ctrl+N）翻到新的一页，标题 / 账号 / 密码 / 网址 / 备注直接写在纸上的横线里
+- 🔁 改这条：双击纸上那一条，那一页就变成可以改的；不想留了就「撕掉这页」，一整条从本子上撕下来
+- ✍️ 写/改都是一个"动作"：新写的那一页像抽出来的一张纸落下来、表格一行一行写出来；改这条是墨迹化开；
+  写进本子、撕掉各有自己的收尾（系统里开了"减少动态效果"就不动）；翻到那一页是"翻过去"而不是跳过去
 - 🧭 目录点一行就跳到那一页；点密码那行 = 复制这条密码
 - 🪟 无边框窗口 + 自绘标题栏（最小化 / 最大化 / 关闭）+ 单实例，就是一个独立的小软件
-- 📋 编辑面板里能复制密码、一键打开网址
+- 📋 写在纸上的那一页能复制密码、一键打开网址、换个强密码
 - ⚡ 内置强密码生成器（长度、字符集可调）
 - ⭐ 常用标记（★ 会画在本子上）、「遮住密码」一键打码
+- 👁 想看一眼某条密码：本子上那一条、或写在纸上的那一页，点 👁 输入主密码，验过才显示
+  （只验密码不换会话；收起来时把明文从界面上清掉，点密码那行仍然是"复制"）
+- 🔤 密码列用等宽阅读字体（0/O、1/l、5/S 一眼分得清）；本子上手写的那部分照旧
+- 🈶 纸面上的字用国标楷体（`KaiTi` / `楷体_GB2312`），不依赖行楷、舒体这类"看运气"的字体
 - ⏱️ 闲置自动锁定（可配置 1~30 分钟或从不）
 - 🔑 支持修改主密码
 
@@ -59,7 +66,7 @@ node work/pack-mac.js dist-mac/密码本-darwin-arm64 1.0.0 arm64
 > **UTF-8 文件名**（PowerShell 的 Compress-Archive 按 ANSI 编码写）。这个脚本自己写 zip，
 > 把这三样都按 macOS 的要求写进去，末尾还会回读校验一遍。
 >
-> 另外它会把 `Info.plist` 里的图标换成 `icon.icns`（`build/icon.icns`，由 `work/make-icns.js` 从 1024 的 `build/icon.png` 生成）、
+> 另外它会把 `Info.plist` 里的图标换成 `icon.icns`（`build/icon.icns`，由 `work/icons/apply-icon.js` 或 `work/make-icns.js` 从 1024 的 `build/icon.png` 生成）、
 > 分类改成 productivity，并把 `ElectronAsarIntegrity` 的键修正成 macOS 认的 `Resources/app.asar`。
 
 ### 路线二（在 Mac 或 CI 上）：要 .dmg 安装包
@@ -117,13 +124,47 @@ macOS 上专门适配了这些（Windows 行为不变，都走 `process.platform
 
 > ⚠️ 请务必备份 `vault.dat`。它是全密文，**必须配合主密码**才能解密；主密码一旦遗忘将无法找回。
 
+文件格式是带 KDF 参数的 v2（老版本写的 v1 文件照样能读）；写法是「临时文件 → fsync → 改名覆盖」，
+每次覆盖前还会在同目录留一份 `vault.dat.bak`（最近一次的内容），写坏了好回退。
+
 ## 测试
 
 ```bash
-npx electron dev-test.js    # 端到端功能测试（解锁→过渡动画→翻页/目录跳页/写一条/改这条/遮住密码/生成器/设置/锁定/删除/快捷键等 30 项）
+npm test          # 单元测试：加密内核 / 保险库 / 数据模型 / IPC 通道一致性（node --test，不需要 Electron）
+npm run test:e2e  # 端到端冒烟测试：真窗口里走一遍 创建 → 写一条 → 翻页/目录 → 改 → 设置 → 改主密码 → 撕掉
 ```
 
 > 测试用独立数据目录 `data-test/`，不会碰你自己的 `data\vault.dat`。
+
+## 代码结构（分层）
+
+```
+主进程（Electron）
+  src/main/index.js       生命周期：单实例 / 菜单 / 开窗 / 收尾
+  src/main/window.js      主窗口（无边框 + 自绘标题栏；macOS 走系统红黄绿灯）
+  src/main/paths.js       数据放哪儿只有这里说了算（便携式 / macOS / VAULT_DATA_DIR）
+  src/main/ipc/*          通道装配：把 core 抛的 VaultError 翻成界面认的 { ok, error, code }
+          │  IPC
+  src/preload.js          唯一的门：window.vaultAPI / window.winAPI（沙箱里只能 require('electron')）
+          │
+核心（不依赖 Electron，可以单独 node --test）
+  src/core/crypto.js      scrypt 派生 + AES-256-GCM 加解密（v1 / v2 文件格式都读）
+  src/core/vault-file.js  文件读写：临时文件 + fsync + 改名，覆盖前留 .bak
+  src/core/vault.js       保险库本体：一个实例 = 一个 vault.dat + 一份会话状态
+  src/core/schema.js      数据长什么样、存盘前的最后一道闸
+  src/core/errors.js      统一错误码
+  src/shared/channels.js  IPC 通道名单（和 preload 的一致性有单测兜底）
+          │
+界面（ES module，不需要 Node 权限）
+  renderer/index.html     解锁屏 + 本子 + 弹窗（只留结构，逻辑都在模块里）
+  renderer/app.js         渲染层入口：注册回调 → 绑事件 → boot()
+  renderer/app/*          lib 小工具 / toast 提示 / store 会话数据 / items 写改撕 / book 本子桥
+  renderer/app/ui/*       lock 解锁屏 / settings 设置 / generator 生成器 / titlebar 标题栏
+  renderer/notebook/*     turn.js 手写本子：model 排版 / ink 字迹 / page 整页 / sheet 编辑页 /
+                          reveal 看一眼的弹框 / timing 时间常量（JS 与 CSS 共用一处）/ notebook 引擎接线
+```
+
+一句话：界面只认 `window.vaultAPI`，主进程只认 `src/core`，加密和落盘那层完全不知道 Electron 的存在。
 
 ## 界面：登录 → 手写密码本
 
@@ -138,10 +179,11 @@ npx electron dev-test.js    # 端到端功能测试（解锁→过渡动画→�
 | 部位 | 内容 |
 | --- | --- |
 | 书 | 封面（署名 = 设置里的「本子署名」）→ 扉页 → 目录（点一行跳页）→ 内容页（一页一条）→ 留白页 → 封底 |
-| 翻页 | 四个角都能拖，或 `← / →`（Home / End 到首尾），`上一页 / 下一页` 也行 |
-| 底部控制条 | `＋ 写一条`（Ctrl+N）、`改这条`（改当前对开页那一条）、`目录`、`遮住密码`、`音效`、页码牌 |
-| 写 / 改 | 都是同一个编辑面板（标题 / 账号 / 密码 / 网址 / 备注 / 分类 / 常用，能复制密码、一键打开网址），保存后本子重排并**自动翻到刚写的那一页** |
-| 本子上直接点 | 点密码那行 = 复制这条密码；点目录某一行 = 跳到那一页；双击某一条 = 打开编辑面板改它 |
+| 翻页 | 四个角都能拖，或 `← / →`（Home / End 到首尾） |
+| 底部控制条 | **没有按钮栏**：本子占满窗口 —— 翻页拖页角或 `← / →`；目录点书顶的红飘带；改某条双击它；遮住密码 / 翻页音效在「设置」里 |
+| 写一条 | 标题栏那个绿色 `＋`（常驻），或 `Ctrl+N`（Mac ⌘N），或「写在最后一页」上那行「还想接着写？点这里」 |
+| 写 / 改 | 翻到那一页直接在纸上写（标题 / 账号 / 密码 / 网址 / 备注 / 分类 / 常用，能复制密码、一键打开网址、换个强密码），保存后本子重排并**自动翻到刚写的那一页** |
+| 本子上直接点 | 点密码那行 = 复制这条密码；点目录某一行 = 跳到那一页；双击某一条 = 那一页就地变成可改的（也能整条撕掉） |
 
 - 代码：`renderer/chat.css`（外壳：标题栏 / 过渡动画 / 把本子收进窗口）、`renderer/app.js`（解锁、挂本子、写/改、设置）、
   `renderer/notebook/notebook.js`（本子分页 / 翻页 / 页内点击 / `window.__mountNotebook()` 重挂）
@@ -216,24 +258,66 @@ window.__applyVariant('B'); window.__applyVariant('');
 
 两个文件都放在 `renderer/notebook/vendor/`，离线可用（页面 CSP 只允许本地脚本）。
 
+## 应用图标
+
+图标是**绿色圆角底 + 白色「书 + 锁」**：本子代表密码本，锁代表加密保管。
+一次命令生成全部图标文件（1024 PNG / 多尺寸 ICO / 多尺寸 ICNS / 窗口图标）：
+
+```bash
+node_modules\.bin\electron.cmd work\icons\apply-icon.js            # 默认 book-lock
+node_modules\.bin\electron.cmd work\icons\apply-icon.js notebook-gold   # 换设计
+node_modules\.bin\electron.cmd work\icons\apply-icon.js paper --preview # 只出预览图
+```
+
+可选设计：`book-lock`（书+锁，默认）、`notebook-gold`（白本+金锁扣）、`notebook-keyhole`（合着的密码书）、
+`open-book`（翻开的密码本）、`notebook-pen`（笔记本+笔）、`paper`（皮面本+钥匙孔）、`char`（原来的「本」）。
+对照表见 `work/icons/sheet-options.png`（大图）与 `work/icons/sheet-small-sizes.png`（16~128px 真实尺寸）。
+
+写入的四个文件：
+
+| 文件 | 用途 |
+| --- | --- |
+| `build/icon.png` | 1024×1024 主图（electron-builder / macOS） |
+| `build/icon.ico` | Windows 安装包与 exe（16/24/32/48/64/128/256 七个尺寸） |
+| `build/icon.icns` | macOS（16/32/64/128/256/512/1024） |
+| `renderer/assets/icon.png` | 运行时的窗口图标（256×256） |
+
+图标线条取自开源图标库 [lucide](https://github.com/lucide-icons/lucide)（ISC 许可），
+底色与圆角比例沿用应用原来的品牌绿（`#07c160`）。
+
 ## 目录结构
 
 ```
-├─ main.js            # 主进程：无边框窗口 + 窗口控制 IPC + 单实例 + AES-256-GCM 加密存储引擎
-├─ preload.js         # 安全桥接层（contextBridge：vaultAPI 保险库 + winAPI 窗口控制）
+├─ src/
+│  ├─ main/           # 主进程：生命周期 / 窗口 / 路径 / IPC 装配（见上文「代码结构（分层）」）
+│  ├─ core/           # 加密与存储内核（不依赖 Electron，可单测）
+│  ├─ shared/         # IPC 通道名单
+│  └─ preload.js      # 安全桥接层（contextBridge：vaultAPI 保险库 + winAPI 窗口控制）
 ├─ renderer/
 │  ├─ index.html      # 界面结构：解锁屏 + #screen-app（密码本 / 列表两个视图）+ 编辑面板 + 弹窗
 │  ├─ styles.css      # 解锁屏 + 抽屉/弹窗等共用样式
 │  ├─ chat.css        # 程序外壳（标题栏 / 视图切换）+ 列表视图 + 本子嵌进窗口后的收敛样式
-│  ├─ app.js          # 渲染逻辑（解锁 → 挂本子、写/改、视图切换、列表渲染、设置）
+│  ├─ app.js          # 渲染层入口（ES module：import app/ 与本子，绑事件后启动）
+│  ├─ app/            # 渲染逻辑：lib / toast / store / items / book / ui/*
 │  ├─ characters.js   # 解锁屏动画小人
 │  ├─ notebook/       # 手写密码本（turn.js 仿真翻页）——既是主界面，也能单独预览
 │  │  ├─ index.html   # 单独预览用（npm run notebook）
-│  │  ├─ notebook.js  # 分页 / 排版 / 翻页接线 / window.__mountNotebook()
+│  │  ├─ notebook.js  # 引擎接线：挂载 / 尺寸 / 翻页 / 键盘 / window.__nb
+│  │  ├─ model.js     # 数据模型 + 分页（纯函数，有单测）
+│  │  ├─ ink.js       # 手写字迹渲染（纯函数）
+│  │  ├─ page.js      # 每一页长什么样（纯函数）
+│  │  ├─ sheet.js     # 写在纸上的那一页（写一条 / 改这条的表单）
+│  │  ├─ reveal.js    # 看一眼密码：输主密码的弹框（验过才显示）
+│  │  ├─ timing.js    # 所有动画时间只有这一处定义（CSS 通过 :root 变量取）
 │  │  ├─ notebook.css  # 版式 / 纸面 / 控制条
 │  │  ├─ variants.css  # 背景板皮肤（默认暖橡木，另有 B/C）
 │  │  └─ vendor/      # jQuery 1.12.4 + turn.js（本地）
 │  └─ assets/icon.png # 应用图标
+├─ tests/
+│  ├─ unit/           # 单元测试（node --test，不用开窗口）
+│  └─ e2e/app.js      # 端到端冒烟测试（npm run test:e2e）
+├─ tools/             # 开发脚本：notebook-preview.js 单独预览本子
 ├─ work/              # 开发用脚本与截图（shot-client.js 出图，look.js / verify.js 看本子）
+│  └─ icons/          # 图标工程：apply-icon.js 生成图标，sheet-*.png 是候选对照表
 └─ data/vault.dat     # 运行时生成的加密保险库
 ```

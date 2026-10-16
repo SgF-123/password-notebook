@@ -8,7 +8,7 @@ process.env.VAULT_DATA_DIR = path.join(__dirname, '..', 'data-test');
 
 app.setPath('userData', path.join(process.env.VAULT_DATA_DIR, 'userdata'));
 
-const { registerIpc, ensureDataDir, getVaultFile } = require('../vault-core');
+const { registerIpc, ensureDataDir, getVaultFile } = require('../src/main/ipc');
 
 app.disableHardwareAcceleration();
 app.commandLine.appendSwitch('disable-gpu');
@@ -18,18 +18,15 @@ const OUT = path.join(__dirname, 'shots', 'client');
 fs.mkdirSync(OUT, { recursive: true });
 
 app.whenReady().then(async () => {
-  if (fs.existsSync(getVaultFile())) fs.unlinkSync(getVaultFile());
-  ensureDataDir();
-  registerIpc(ipcMain, { clipboard, shell });
-  ipcMain.on('win:minimize', () => {});
-  ipcMain.on('win:toggleMaximize', () => {});
-  ipcMain.on('win:close', () => {});
-  ipcMain.handle('win:isMaximized', () => false);
+  const { vault } = registerIpc(ipcMain, { clipboard, shell });
+  const vaultFile = vault.filePath;
+  fs.mkdirSync(path.dirname(vaultFile), { recursive: true });
+  if (fs.existsSync(vaultFile)) fs.unlinkSync(vaultFile);
 
   const win = new BrowserWindow({
     width: 1280, height: 850, frame: false, show: false,
     webPreferences: {
-      preload: path.join(__dirname, '..', 'preload.js'),
+      preload: path.join(__dirname, '..', 'src', 'preload.js'),
       contextIsolation: true, nodeIntegration: false, sandbox: true
     }
   });
